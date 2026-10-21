@@ -19,7 +19,7 @@
 - [x] 把配置改成 `application.yml`，端口用默认的 8080
 - [x] 写一个 GET 接口，用来确认应用在正常运行
 - [x] 接入 Actuator，确认 `/actuator/health` 可以访问
-- [ ] 写一个启动测试，让 `./mvnw test` 能重复通过
+- [x] 写一个启动测试，让 `./mvnw test` 能重复通过
 - [x] 运行验证：执行 `./mvnw spring-boot:run`，访问两个接口，把命令和结果截图保存到仓库
 - [ ] 更新根目录 `README.md`，补上工程所在目录、运行方式和测试方式
 
@@ -76,6 +76,23 @@ curl -i http://localhost:8080/actuator/health
 ```
 
 ![actuator/health 返回 UP](screenshots/04-actuator-health-up.png)
+
+## 启动测试
+
+项目里一共有 2 个测试：
+
+- `MonolithApplicationTests`：Initializr 自带的 `@SpringBootTest` 测试（`contextLoads`），检查 Spring 应用上下文能正常加载，也就是作业要求的启动测试
+- `HelloControllerTests`：我额外补充的接口测试，检查 `/api/hello` 返回 200，并且 JSON 里有 `project` 和 `message` 字段
+
+在 `monolith/` 目录下执行：
+
+```bash
+./mvnw test
+```
+
+结果是 `BUILD SUCCESS`，2 个测试全部通过：
+
+![mvnw test 运行结果](screenshots/01-mvnw-test.png)
 
 ## 下周衔接
 
