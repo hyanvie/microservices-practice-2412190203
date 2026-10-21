@@ -14,14 +14,68 @@
 ## 本周计划
 
 - [x] 写好项目提案 `docs/project-proposal.md`
-- [ ] 确认本机 JDK 版本是 25（之前环境里是 17，需要换）
-- [ ] 用 Spring Initializr 生成工程，放到仓库根目录的 `monolith/` 下（Maven、Java 25、Spring Boot 4.0.x，Group 和 Package 都用 `com.zjgsu.hyh`）
-- [ ] 把配置改成 `application.yml`，端口用默认的 8080
-- [ ] 写一个 GET 接口，用来确认应用在正常运行
-- [ ] 接入 Actuator，确认 `/actuator/health` 可以访问
+- [x] 确认本机 JDK 版本是 25（之前环境里是 17，需要换）
+- [x] 用 Spring Initializr 生成工程，放到仓库根目录的 `monolith/` 下（Maven、Java 25、Spring Boot 4.0.x，Group 和 Package 都用 `com.zjgsu.hyh`）
+- [x] 把配置改成 `application.yml`，端口用默认的 8080
+- [x] 写一个 GET 接口，用来确认应用在正常运行
+- [x] 接入 Actuator，确认 `/actuator/health` 可以访问
 - [ ] 写一个启动测试，让 `./mvnw test` 能重复通过
-- [ ] 运行验证：执行 `./mvnw spring-boot:run`，访问两个接口，把命令和结果截图保存到仓库
+- [x] 运行验证：执行 `./mvnw spring-boot:run`，访问两个接口，把命令和结果截图保存到仓库
 - [ ] 更新根目录 `README.md`，补上工程所在目录、运行方式和测试方式
+
+## 创建并运行 Spring Boot 工程
+
+### 工程说明
+
+在仓库根目录新建了 `monolith/`，用 Spring Initializr 生成 Maven 工程，包含 Spring Web MVC 和 Actuator。
+
+- Java 25，Spring Boot 4.0.8，Maven（使用 Maven Wrapper，不需要单独安装 Maven）
+- Group / Package：`com.zjgsu.hyh`
+- 配置文件：`monolith/src/main/resources/application.yml`
+- 应用名：`secondlight-monolith`，端口使用默认的 8080（没有修改）
+- 新增接口：`GET /api/hello`，返回项目名称和问候语，用来确认应用在正常运行
+
+### 启动命令
+
+在 `monolith/` 目录下执行：
+
+```bash
+./mvnw spring-boot:run   # 启动应用，监听 8080 端口
+```
+
+日志里可以看到 Spring Boot 4.0.8、Java 25，Tomcat 在 8080 端口启动，Actuator 暴露了 2 个端点，最后出现 `Started MonolithApplication`，说明启动成功：
+
+![应用启动日志](screenshots/02-spring-boot-run.png)
+
+### 接口验证
+
+**1. GET /api/hello**
+
+```bash
+curl -i http://localhost:8080/api/hello
+```
+
+响应状态码 200，内容如下：
+
+```json
+{"project":"拾光集 · 二手交易平台 (SecondLight)","message":"Hello from SecondLight monolith!"}
+```
+
+![api/hello 响应](screenshots/03-api-hello.png)
+
+**2. GET /actuator/health**
+
+```bash
+curl -i http://localhost:8080/actuator/health
+```
+
+响应状态码 200，`status` 为 `UP`：
+
+```json
+{"groups":["liveness","readiness"],"status":"UP"}
+```
+
+![actuator/health 返回 UP](screenshots/04-actuator-health-up.png)
 
 ## 下周衔接
 
