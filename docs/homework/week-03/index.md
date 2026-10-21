@@ -21,7 +21,7 @@
 - [x] 接入 Actuator，确认 `/actuator/health` 可以访问
 - [x] 写一个启动测试，让 `./mvnw test` 能重复通过
 - [x] 运行验证：执行 `./mvnw spring-boot:run`，访问两个接口，把命令和结果截图保存到仓库
-- [ ] 更新根目录 `README.md`，补上工程所在目录、运行方式和测试方式
+- [x] 更新根目录 `README.md`，补上工程所在目录、运行方式和测试方式
 
 ## 创建并运行 Spring Boot 工程
 
@@ -93,6 +93,17 @@ curl -i http://localhost:8080/actuator/health
 结果是 `BUILD SUCCESS`，2 个测试全部通过：
 
 ![mvnw test 运行结果](screenshots/01-mvnw-test.png)
+
+## 本周完成内容汇总
+
+- 写好项目提案，确定先做"买家下单购买商品"这个场景，核心模型是商品和订单
+- 在 `monolith/` 下创建并跑通 Spring Boot 工程（Java 25、Spring Boot 4.0.8、Maven）
+- 配置统一用 `application.yml`，端口 8080
+- 完成 `GET /api/hello` 接口，并验证 `/actuator/health` 返回 `UP`
+- 启动测试 `contextLoads` 通过，另外补了一个接口测试
+- 在根目录 `README.md` 补充了运行说明（环境要求、启动与测试命令、接口地址、尚未实现的内容）
+
+业务建模、REST API、数据库这些本周都没有做，留到后面的作业。
 
 ## 下周衔接
 

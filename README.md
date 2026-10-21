@@ -283,9 +283,49 @@ stateDiagram-v2
 ## 目录说明
 
 - `docs/homework/`：每周作业文档，按周次划分子目录
-- `src/`：项目源代码，随课程进度逐步添加
+- `monolith/`：Spring Boot 单体工程（Maven），第 3 周创建
+
+## 运行说明
+
+Spring Boot 工程在 `monolith/` 目录下，目前只是一个能启动的起步工程，用来验证开发环境和基础配置。
+
+### 环境要求
+
+- Java 25
+- Maven：工程自带 Maven Wrapper（`mvnw`），不用另外安装 Maven
+- Spring Boot 4.0.8
+
+### 启动与测试
+
+先进入 `monolith/` 目录，再执行：
+
+```bash
+./mvnw test              # 运行测试
+./mvnw spring-boot:run   # 启动应用
+```
+
+应用默认运行在 8080 端口，没有修改。
+
+### 接口地址
+
+启动后可以访问：
+
+| 说明 | 地址 |
+|---|---|
+| 问候接口 | `GET http://localhost:8080/api/hello` |
+| 健康检查 | `GET http://localhost:8080/actuator/health`（返回 `UP`） |
+
+具体的运行结果和截图见 [第 3 周作业记录](docs/homework/week-03/index.md)。
+
+### 目前还没实现的内容
+
+- 商品、订单等业务模型
+- 完整的 REST API（Controller / Service / Repository 分层）
+- 数据库持久化
+- 认证、服务拆分等后续课程内容
 
 ## 课程作业记录
 
 - [第1周：开发环境与个人仓库](docs/homework/week-01/index.md)
 - [第2周：项目选题与功能规划](docs/homework/week-02/index.md)
+- [第3周：项目提案与 Spring Boot 起步](docs/homework/week-03/index.md)
