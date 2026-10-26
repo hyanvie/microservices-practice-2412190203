@@ -287,7 +287,7 @@ stateDiagram-v2
 
 ## 运行说明
 
-Spring Boot 工程在 `monolith/` 目录下，目前只是一个能启动的起步工程，用来验证开发环境和基础配置。
+Spring Boot 单体工程位于 `monolith/`，实现商品查询、下单和订单取消流程。商品与订单通过 Spring Data JPA 保存到本地 H2 文件数据库。
 
 ### 环境要求
 
@@ -300,8 +300,8 @@ Spring Boot 工程在 `monolith/` 目录下，目前只是一个能启动的起�
 先进入 `monolith/` 目录，再执行：
 
 ```bash
-./mvnw test              # 运行测试
-./mvnw spring-boot:run   # 启动应用
+./mvnw test              # 运行测试（使用独立的内存 H2 数据库）
+./mvnw spring-boot:run   # 启动应用（数据保存在 monolith/data/secondlight）
 ```
 
 应用默认运行在 8080 端口，没有修改。
@@ -313,19 +313,34 @@ Spring Boot 工程在 `monolith/` 目录下，目前只是一个能启动的起�
 | 说明 | 地址 |
 |---|---|
 | 问候接口 | `GET http://localhost:8080/api/hello` |
+| 商品列表 | `GET http://localhost:8080/api/items` |
+| 商品详情 | `GET http://localhost:8080/api/items/item-1001` |
+| 创建订单 | `POST http://localhost:8080/api/orders` |
+| 查询订单 | `GET http://localhost:8080/api/orders` |
+| 取消订单 | `POST http://localhost:8080/api/orders/{orderId}/cancel` |
 | 健康检查 | `GET http://localhost:8080/actuator/health`（返回 `UP`） |
 
-具体的运行结果和截图见 [第 3 周作业记录](docs/homework/week-03/index.md)。
+可直接运行的请求示例（先启动应用；每个演示商品成功下单后会变为已售出）：
 
-### 目前还没实现的内容
+```bash
+curl -i http://localhost:8080/api/items/item-1001
+```
 
-- 商品、订单等业务模型
-- 完整的 REST API（Controller / Service / Repository 分层）
-- 数据库持久化
-- 认证、服务拆分等后续课程内容
+```bash
+curl -i -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1001","buyerId":"buyer-1001"}'
+```
+
+运行结果和截图见 [第 4 周作业记录](docs/homework/week-04/index.md)；数据库表结构见 [数据库设计](docs/database.md)。
+
+### 后续课程内容
+
+- 用户认证、真实支付、服务拆分等后续课程内容
 
 ## 课程作业记录
 
 - [第1周：开发环境与个人仓库](docs/homework/week-01/index.md)
 - [第2周：项目选题与功能规划](docs/homework/week-02/index.md)
 - [第3周：项目提案与 Spring Boot 起步](docs/homework/week-03/index.md)
+- [第4周：单体应用与数据库持久化](docs/homework/week-04/index.md)

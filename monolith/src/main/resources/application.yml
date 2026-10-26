@@ -1,6 +1,15 @@
 spring:
   application:
     name: secondlight-monolith   # 应用名
+  datasource:
+    url: jdbc:h2:file:./data/secondlight
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 server:
   port: 8080   # 默认端口，如果改了要在 README 里写明
