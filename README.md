@@ -287,24 +287,62 @@ stateDiagram-v2
 
 ## 运行说明
 
-Spring Boot 单体工程位于 `monolith/`，实现商品查询、下单和订单取消流程。商品与订单通过 Spring Data JPA 保存到本地 H2 文件数据库。
+Spring Boot 单体工程位于 `monolith/`，实现商品查询、下单和订单取消流程。商品与订单通过 Spring Data JPA 保存到本地 MySQL；自动化测试使用独立的内存 H2 数据库。
 
 ### 环境要求
 
 - Java 25
 - Maven：工程自带 Maven Wrapper（`mvnw`），不用另外安装 Maven
 - Spring Boot 4.0.8
+- MySQL 8.0 或更新版本（本地运行应用时需要）
+
+### 本地 MySQL 安装与配置
+
+1. 使用 MySQL 官方安装程序安装并启动 MySQL Server 8.0+，同时安装 MySQL 命令行客户端；Windows 可使用 MySQL Installer。
+2. 通过管理员账户登录 MySQL 并创建应用数据库和本地账号（将示例密码替换为你自己的密码）：
+
+```sql
+CREATE DATABASE secondlight CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER 'secondlight'@'localhost' IDENTIFIED BY 'replace-with-your-password';
+GRANT ALL PRIVILEGES ON secondlight.* TO 'secondlight'@'localhost';
+```
+
+3. 在启动应用的终端设置连接参数。PowerShell 示例：
+
+```powershell
+$env:DB_URL = "jdbc:mysql://localhost:3306/secondlight?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC"
+$env:DB_USERNAME = "secondlight"
+$env:DB_PASSWORD = "replace-with-your-password"
+```
+
+Bash 环境示例：
+
+```bash
+export DB_URL='jdbc:mysql://localhost:3306/secondlight?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC'
+export DB_USERNAME=secondlight
+export DB_PASSWORD='replace-with-your-password'
+```
+
+`DB_URL` 默认连接本机 `secondlight` 数据库，用户名默认 `secondlight`，密码默认空；如数据库账号设置了密码，必须设置 `DB_PASSWORD`。不要把真实密码提交到 Git。Hibernate 会在首次启动时创建或更新表，应用启动时会补齐缺失的演示商品。
 
 ### 启动与测试
 
-先进入 `monolith/` 目录，再执行：
+先进入 `monolith/` 目录，再执行测试和启动命令：
 
 ```bash
-./mvnw test              # 运行测试（使用独立的内存 H2 数据库）
-./mvnw spring-boot:run   # 启动应用（数据保存在 monolith/data/secondlight）
+./mvnw test              # 运行测试（使用独立的内存 H2 数据库，不需要启动 MySQL）
+./mvnw spring-boot:run   # 启动应用（使用上面配置的本地 MySQL）
 ```
 
 应用默认运行在 8080 端口，没有修改。
+
+MySQL 启动后可检查表和演示数据（输入 `secondlight` 账号密码）：
+
+```bash
+mysql -u secondlight -p -D secondlight -e "SHOW TABLES; SELECT id,title,status FROM items;"
+```
+
+重复启动应用不会重复创建演示商品；演示商品已售出时不会被重置。
 
 ### 接口地址
 

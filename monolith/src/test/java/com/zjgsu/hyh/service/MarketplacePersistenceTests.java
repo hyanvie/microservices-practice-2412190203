@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,21 @@ class MarketplacePersistenceTests {
 
     @Autowired
     private ItemOrderService service;
+
+    @Autowired
+    private SampleDataInitializer sampleDataInitializer;
+
+    @Test
+    void sampleDataInitializationCanBeRepeated() {
+        long itemCountBefore = itemRepository.count();
+
+        sampleDataInitializer.run(new DefaultApplicationArguments());
+        sampleDataInitializer.run(new DefaultApplicationArguments());
+
+        assertEquals(itemCountBefore, itemRepository.count());
+        assertNotNull(itemRepository.findById("item-1001").orElseThrow());
+        assertNotNull(itemRepository.findById("item-1002").orElseThrow());
+    }
 
     @Test
     void creatingOrderPersistsOrderAndSoldItemTogether() {

@@ -23,6 +23,49 @@ cd monolith
 
 测试通过（`BUILD SUCCESS`）。测试使用独立的内存 H2 数据库，不依赖运行中的服务。
 
+## 数据库持久化
+
+### 实现思路与完成结果
+
+应用默认数据源已接入本地 MySQL 8.0+，通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 配置连接；Hibernate 根据 JPA 实体维护 `items` 和 `orders` 两张业务表。`Order` 通过非空外键关联 `Item`，必填字段、主键、金额精度和字段长度约束均在实体映射中定义。数据访问由 `repository` 包中的 `ItemRepository`、`OrderRepository` 提供，创建订单 API 使用 `OrderRequest` DTO 接收输入。
+
+`SampleDataInitializer` 在应用启动时按商品主键补齐演示数据，重复启动不会重复插入。自动化测试仍使用独立的内存 H2，覆盖订单与商品状态持久化及演示数据初始化的幂等性。
+
+### 本地运行与验证
+
+先按仓库根目录 README 的步骤安装并启动 MySQL，创建 `secondlight` 数据库和应用账号，在终端设置 `DB_USERNAME`、`DB_PASSWORD`（可选设置 `DB_URL`），然后在 `monolith/` 下执行：
+
+```bash
+./mvnw test
+./mvnw spring-boot:run
+```
+
+应用启动后，在另一终端验证数据库表和演示数据：
+
+```bash
+mysql -u secondlight -p -D secondlight -e "SHOW TABLES; SELECT id,title,status FROM items;"
+curl -i http://localhost:8080/api/items
+```
+
+创建订单并检查其数据库记录及商品状态变化：
+
+```bash
+curl -i -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1001","buyerId":"buyer-2001"}'
+mysql -u secondlight -p -D secondlight -e "SELECT id,item_id,buyer_id,status FROM orders; SELECT id,status FROM items WHERE id='item-1001';"
+```
+
+预期 `./mvnw test` 显示 `BUILD SUCCESS`；MySQL 中可看到 `items`、`orders` 两张表，成功下单后 `orders` 有记录且 `item-1001` 状态为 `SOLD`。重启应用后再次查询，订单和商品状态仍保留。
+
+### 截图
+
+请将实际运行截图保存到 `screenshots/`：
+
+- `04-mysql-tables-and-data.png`：MySQL `SHOW TABLES` 及演示商品查询结果
+- `05-mysql-order-persistence.png`：创建订单的 API 响应及 MySQL 订单/商品状态查询结果
+- `06-mysql-tests.png`：`./mvnw test` 的 `BUILD SUCCESS` 结果
+
 ## 单体应用实现
 
 ### 实现思路
@@ -31,7 +74,7 @@ cd monolith
 - `repository`：Spring Data JPA Repository 负责数据库读写。
 - `service`：实现查询、创建/取消订单、业务规则校验和事务控制。
 - `controller`：提供 `/api` 路径 REST 接口，只负责 HTTP 输入输出。
-- 应用默认使用 H2 文件数据库，数据存放在 `monolith/data/secondlight`；首次启动会写入两个演示商品。测试配置使用内存 H2。
+- 应用使用本地 MySQL 持久化；首次启动会补齐两个演示商品。自动化测试配置使用内存 H2。
 
 接口包括：
 
@@ -91,3 +134,4 @@ curl -i -X POST http://localhost:8080/api/orders \
 - [x] 完成 Service、REST API 和原子化下单/取消流程
 - [x] 增加可重复运行的自动化测试及接口截图
 - [x] README 补充启动命令和可运行的 curl 示例
+- [x] 接入本地 MySQL，补充表结构、连接配置和重复运行安全的演示数据初始化

@@ -20,8 +20,8 @@ public class SampleDataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (itemRepository.count() == 0) {
-            Instant now = Instant.now();
+        Instant now = Instant.now();
+        if (!itemRepository.existsById("item-1001")) {
             itemRepository.save(new Item(
                     "item-1001",
                     "Java 编程教材",
@@ -33,6 +33,8 @@ public class SampleDataInitializer implements ApplicationRunner {
                     ItemStatus.ON_SALE,
                     "seller-1001",
                     now));
+        }
+        if (!itemRepository.existsById("item-1002")) {
             itemRepository.save(new Item(
                     "item-1002",
                     "无线鼠标",
