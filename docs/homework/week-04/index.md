@@ -66,6 +66,32 @@ mysql -u secondlight -p -D secondlight -e "SELECT id,item_id,buyer_id,status FRO
 - `05-mysql-order-persistence.png`：创建订单的 API 响应及 MySQL 订单/商品状态查询结果
 - `06-mysql-tests.png`：`./mvnw test` 的 `BUILD SUCCESS` 结果
 
+## 测试与验证
+
+### 实现思路与覆盖范围
+
+测试按 Repository、Service、API 三层分别验证，并使用 `test` profile 的内存 H2 数据库，不依赖本地 MySQL：
+
+- **Repository 读写：** `MarketplacePersistenceTests.repositoriesPersistAndReadItemsAndOrders` 通过 `ItemRepository`、`OrderRepository` 保存并重新读取商品和订单，校验关联、买家及金额字段；测试事务结束后自动回滚，重复执行不会污染数据。
+- **Service 业务规则：** `ItemOrderServiceTests` 验证正常下单会记录价格并售出商品，拒绝卖家自购和重复购买已售商品，以及取消订单后恢复商品在售。
+- **API 正常与错误响应：** `MarketplaceControllerTests` 验证商品查询返回 `200`、成功创建订单返回 `201`，以及卖家自购返回 `409` 和错误详情。
+- **测试数据重复运行：** `MarketplacePersistenceTests.sampleDataInitializationCanBeRepeated` 连续执行演示数据初始化并验证记录数不变。
+
+### 运行命令与结果
+
+在仓库根目录运行完整测试套件：
+
+```bash
+cd monolith
+./mvnw test
+```
+
+预期 Maven 显示 `BUILD SUCCESS`，所有测试 `Failures: 0, Errors: 0`。可重复执行同一命令；测试使用每次重建的内存 H2 数据库，演示数据初始化本身也有幂等测试。
+
+### 截图
+
+请将运行 `./mvnw test` 并显示各测试类结果及最终 `BUILD SUCCESS` 的终端截图保存为 `screenshots/07-test-suite-success.png`。
+
 ## 单体应用实现
 
 ### 实现思路
@@ -135,3 +161,4 @@ curl -i -X POST http://localhost:8080/api/orders \
 - [x] 增加可重复运行的自动化测试及接口截图
 - [x] README 补充启动命令和可运行的 curl 示例
 - [x] 接入本地 MySQL，补充表结构、连接配置和重复运行安全的演示数据初始化
+- [x] 增加 Repository 读写、Service 规则、API 成功/错误响应及可重复初始化测试
