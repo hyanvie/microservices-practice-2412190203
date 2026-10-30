@@ -71,21 +71,35 @@ MySQL 数据保存于命名卷 `mysql-data`，应用使用 `depends_on` 的
 
 ## 3. 业务 API 验证
 
-应用启动后，使用以下接口验证容器内应用可正常访问数据库：
+应用启动后，先验证健康接口：
 
 ```bash
-curl -i http://localhost:8080/api/items
+curl -i http://localhost:8080/actuator/health
+```
+
+再验证商品查询和订单创建、查询：
+
+```bash
 curl -i http://localhost:8080/api/items/item-1001
 curl -i -X POST http://localhost:8080/api/orders \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"item-1001","buyerId":"buyer-1001"}'
+  -d '{"itemId":"item-1002","buyerId":"buyer-1001"}'
+curl -i http://localhost:8080/api/orders/{orderId}
 ```
 
 其中：
 
-- `/api/items` 返回商品列表，应用启动时会初始化演示商品。
+- `/actuator/health` 返回 `200` 和 `status: UP`。
 - `/api/items/item-1001` 返回商品详情。
-- `POST /api/orders` 可创建订单，创建后数据库中会新增订单记录，商品状态由 `ON_SALE` 转为 `SOLD`。
+- `POST /api/orders` 返回 `201 Created` 和订单信息。
+- 使用创建结果中的 `id` 查询 `/api/orders/{orderId}`，返回 `200` 和订单详情。
+- 创建订单后，`item-1002` 的状态由 `ON_SALE` 变为 `SOLD`。
+
+本小步建议保存以下 API 验证截图：
+
+- `05-api-health.png`：健康接口请求地址、`200` 和 `status: UP`。
+- `06-api-create-order.png`：订单创建请求、`201 Created` 和订单 JSON。
+- `07-api-query-order.png`：订单查询请求、`200` 和订单 JSON。
 
 ## 4. 数据持久化验证
 

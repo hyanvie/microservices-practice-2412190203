@@ -377,16 +377,25 @@ docker compose down
 | 取消订单 | `POST http://localhost:8080/api/orders/{orderId}/cancel` |
 | 健康检查 | `GET http://localhost:8080/actuator/health`（返回 `UP`） |
 
-可直接运行的请求示例（先启动应用；每个演示商品成功下单后会变为已售出）：
+容器启动后可以直接验证：
 
 ```bash
+curl -i http://localhost:8080/actuator/health
 curl -i http://localhost:8080/api/items/item-1001
 ```
+
+创建订单：
 
 ```bash
 curl -i -X POST http://localhost:8080/api/orders \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"item-1001","buyerId":"buyer-1001"}'
+  -d '{"itemId":"item-1002","buyerId":"buyer-1001"}'
+```
+
+记录返回的订单 `id` 后查询订单：
+
+```bash
+curl -i http://localhost:8080/api/orders/{orderId}
 ```
 
 运行结果和截图见 [第 4 周作业记录](docs/homework/week-04/index.md)；数据库表结构见 [数据库设计](docs/database.md)。
