@@ -1,1 +1,5 @@
 *:Zone.Identifier
+AGENTS.md
+.env
+.env.*
+!.env.example

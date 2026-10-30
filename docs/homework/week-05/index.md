@@ -37,7 +37,7 @@ docker image inspect secondlight:week05
 ```bash
 cp .env.example .env
 
-docker compose up --build -d
+docker compose up -d --build
 ```
 
 启动后，可查看两个容器：
@@ -46,6 +46,12 @@ docker compose up --build -d
 docker compose ps
 ```
 
+Compose 包含 `app` 和 `mysql` 两个服务，其中 MySQL 使用
+`mysql:8.4.11`，应用的构建上下文为 `./monolith`。两个服务使用 Compose
+默认共享网络，应用通过服务名 `mysql` 访问数据库，而不是使用宿主机地址。
+MySQL 数据保存于命名卷 `mysql-data`，应用使用 `depends_on` 的
+`service_healthy` 条件等待 MySQL 健康检查通过后再启动。
+
 应用容器会通过环境变量连接 MySQL：
 
 - `DB_URL=jdbc:mysql://mysql:3306/secondlight?...`
@@ -53,6 +59,15 @@ docker compose ps
 - `DB_PASSWORD=secondlightpass`
 
 容器连接参数与业务数据保持一致。MySQL 数据挂载在 `mysql-data` 卷上，容器重建后数据不会丢失。
+
+本小步建议保存以下启动证明截图：
+
+- `03-compose-ps-success.png`：执行 `docker compose ps`，清楚显示
+  `secondlight-app` 和 `secondlight-mysql` 均为运行状态，MySQL 显示
+  `healthy`。
+- `04-compose-logs-success.png`：执行
+  `docker compose logs --tail 100 app`，清楚显示应用连接 MySQL、
+  `Tomcat started` 和 `Started MonolithApplication`。
 
 ## 3. 业务 API 验证
 

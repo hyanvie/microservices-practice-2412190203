@@ -344,6 +344,25 @@ mysql -u secondlight -p -D secondlight -e "SHOW TABLES; SELECT id,title,status F
 
 重复启动应用不会重复创建演示商品；演示商品已售出时不会被重置。
 
+### Docker Compose 启动
+
+在仓库根目录复制环境变量模板。`.env` 只用于本地运行，已被 `.gitignore` 忽略，
+不要将其中的真实密码提交到 Git：
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail 100 app
+docker compose down
+```
+
+应用通过 Compose 网络中的服务名 `mysql` 连接数据库，连接地址为
+`jdbc:mysql://mysql:3306/secondlight...`；宿主机访问应用使用
+`http://localhost:8080`。`MYSQL_PORT` 仅控制 MySQL 暴露到宿主机的端口，
+`mysql` 容器内部端口仍为 `3306`。如果宿主机的 `3306` 已被占用，可在 `.env`
+中将 `MYSQL_PORT` 改为 `3307` 或其他空闲端口。
+
 ### 接口地址
 
 启动后可以访问：
