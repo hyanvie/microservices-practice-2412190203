@@ -18,9 +18,25 @@ wait_for_health() {
   return 1
 }
 
+wait_for_database() {
+  local container="$1"
+  for _ in {1..30}; do
+    if [ "$(docker inspect --format '{{.State.Health.Status}}' "$container" 2>/dev/null)" = "healthy" ]; then
+      printf '%s database health check passed\n' "$container"
+      return 0
+    fi
+    sleep 2
+  done
+  printf '%s database health check failed\n' "$container" >&2
+  return 1
+}
+
 docker compose up -d --build
 trap 'docker compose down' EXIT
 
+wait_for_database "secondlight-user-db"
+wait_for_database "secondlight-item-db"
+wait_for_database "secondlight-order-db"
 wait_for_health "http://localhost:${USER_SERVICE_PORT:-8083}/actuator/health" "user-service"
 wait_for_health "http://localhost:${ITEM_SERVICE_PORT:-8081}/actuator/health" "item-service"
 wait_for_health "http://localhost:${ORDER_SERVICE_PORT:-8082}/actuator/health" "order-service"

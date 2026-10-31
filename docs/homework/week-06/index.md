@@ -17,8 +17,7 @@
 ### 当前完成情况
 
 服务边界设计已完成：已完成单体模块映射、三个服务的职责与数据归属、服务调用
-关系和 Mermaid 架构图。设计中的独立数据库和数据表归属已明确，但数据库接入
-属于后续代码实现工作，不能将当前内存版服务描述为已经完成持久化。
+关系和 Mermaid 架构图；三个服务也已分别接入各自的 MySQL 数据库和数据表。
 
 ### 设计文档检查
 
@@ -56,9 +55,9 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 商品服务连接失败返回 `503 Service Unavailable`，校验失败时不会写入订单。
 服务地址、连接超时和读取超时都可以通过环境变量覆盖。
 
-当前代码的商品、用户和订单数据仍由各服务进程内存保存，尚未接入独立数据库
-和真实数据表。因此“独立数据归属”已在设计和接口边界中完成，但数据库落地
-仍是本小节未完成项，不能用当前实现声称该评分点已全部通过。
+当前代码已为三个服务分别接入独立 MySQL 数据库和数据表；数据库连接通过环境
+变量配置，服务启动时初始化本服务拥有的表。跨服务关联仍只保存业务 ID，不
+跨库读写数据表。
 
 ### 运行和验证
 
@@ -85,3 +84,38 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 - `02-item-services-test-success.png`：item-service 测试通过。
 - `03-order-services-test-success.png`：order-service 测试通过。
 - `04-smoke-test-success.png`：三个健康检查和跨服务下单烟测通过。
+
+## 3. 本地编排
+
+### 实现思路
+
+根目录 `compose.yaml` 编排三个 Spring Boot 服务和三个独立的 MySQL 容器：
+`user-service` 使用 `secondlight_user` 和 `user_user`，`item-service` 使用
+`secondlight_item` 和 `item_user`，`order-service` 使用 `secondlight_order` 和
+`order_user`。每个数据库只由对应服务使用，服务通过 Compose 服务名访问数据库
+和其他服务，不使用容器内的 `localhost`。三个数据库分别挂载命名数据卷，
+服务启动前等待对应数据库健康检查通过。
+
+每个服务的 `schema.sql` 只创建和初始化自己的表：`users`、`items` 或
+`orders`。订单中的 `item_id`、`buyer_id` 和 `seller_id` 仅保存跨服务业务 ID，
+不建立跨数据库外键。
+
+### 运行和验证
+
+在仓库根目录执行：
+
+```bash
+docker compose up -d --build
+docker compose ps
+./scripts/smoke-test.sh
+```
+
+预期三个数据库显示 `healthy`，三个服务健康检查通过，并看到
+`cross-service order smoke test passed`。数据卷验证可使用：
+
+```bash
+docker volume ls | grep microservices-practice-2412190203
+```
+
+本地编排验证截图应保存为 `screenshots/05-compose-database-smoke-success.png`，
+内容应包含三个数据库健康检查、三个服务健康检查和跨服务下单烟测结果。

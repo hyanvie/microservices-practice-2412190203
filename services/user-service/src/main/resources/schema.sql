@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(80) PRIMARY KEY
+);
+
+INSERT INTO users (id)
+SELECT 'buyer-1001'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 'buyer-1001');
+
+INSERT INTO users (id)
+SELECT 'seller-1001'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 'seller-1001');
+
+INSERT INTO users (id)
+SELECT 'seller-1002'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 'seller-1002');

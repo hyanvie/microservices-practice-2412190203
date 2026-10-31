@@ -1,4 +1,55 @@
 services:
+  user-db:
+    image: mysql:8.4.11
+    container_name: secondlight-user-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: secondlight_user
+      MYSQL_USER: user_user
+      MYSQL_PASSWORD: user_pass
+      MYSQL_ROOT_PASSWORD: ${USER_DB_ROOT_PASSWORD:-user_root_pass}
+    volumes:
+      - user-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uuser_user -puser_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  item-db:
+    image: mysql:8.4.11
+    container_name: secondlight-item-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: secondlight_item
+      MYSQL_USER: item_user
+      MYSQL_PASSWORD: item_pass
+      MYSQL_ROOT_PASSWORD: ${ITEM_DB_ROOT_PASSWORD:-item_root_pass}
+    volumes:
+      - item-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uitem_user -pitem_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  order-db:
+    image: mysql:8.4.11
+    container_name: secondlight-order-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: secondlight_order
+      MYSQL_USER: order_user
+      MYSQL_PASSWORD: order_pass
+      MYSQL_ROOT_PASSWORD: ${ORDER_DB_ROOT_PASSWORD:-order_root_pass}
+    volumes:
+      - order-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uorder_user -porder_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   user-service:
     build:
       context: ./services/user-service
@@ -8,6 +59,12 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8083
+      DB_URL: jdbc:mysql://user-db:3306/secondlight_user?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      DB_USERNAME: user_user
+      DB_PASSWORD: user_pass
+    depends_on:
+      user-db:
+        condition: service_healthy
     ports:
       - "${USER_SERVICE_PORT:-8083}:8083"
 
@@ -20,6 +77,12 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8081
+      DB_URL: jdbc:mysql://item-db:3306/secondlight_item?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      DB_USERNAME: item_user
+      DB_PASSWORD: item_pass
+    depends_on:
+      item-db:
+        condition: service_healthy
     ports:
       - "${ITEM_SERVICE_PORT:-8081}:8081"
 
@@ -33,10 +96,20 @@ services:
     depends_on:
       item-service:
         condition: service_started
+      order-db:
+        condition: service_healthy
     environment:
       SERVER_PORT: 8082
+      DB_URL: jdbc:mysql://order-db:3306/secondlight_order?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      DB_USERNAME: order_user
+      DB_PASSWORD: order_pass
       ITEM_SERVICE_URL: http://item-service:8081
       ITEM_CONNECT_TIMEOUT_MS: ${ITEM_CONNECT_TIMEOUT_MS:-1000}
       ITEM_READ_TIMEOUT_MS: ${ITEM_READ_TIMEOUT_MS:-2000}
     ports:
       - "${ORDER_SERVICE_PORT:-8082}:8082"
+
+volumes:
+  user-db-data:
+  item-db-data:
+  order-db-data:

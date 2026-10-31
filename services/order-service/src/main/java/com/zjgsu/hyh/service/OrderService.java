@@ -7,6 +7,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -18,12 +20,22 @@ public class OrderService {
     private final RestTemplate restTemplate;
     private final String itemServiceUrl;
     private final Map<String, OrderView> orders = new ConcurrentHashMap<>();
+    private final JdbcTemplate jdbcTemplate;
 
     public OrderService(
             RestTemplate restTemplate,
             @Value("${clients.item.base-url}") String itemServiceUrl) {
+        this(restTemplate, itemServiceUrl, null);
+    }
+
+    @Autowired
+    public OrderService(
+            RestTemplate restTemplate,
+            @Value("${clients.item.base-url}") String itemServiceUrl,
+            JdbcTemplate jdbcTemplate) {
         this.restTemplate = restTemplate;
         this.itemServiceUrl = itemServiceUrl;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     public OrderView createOrder(String itemId, String buyerId) {
@@ -44,11 +56,38 @@ public class OrderService {
                 item.price(),
                 "PENDING_PAYMENT",
                 Instant.now());
-        orders.put(order.id(), order);
+        if (jdbcTemplate != null) {
+            jdbcTemplate.update(
+                    "INSERT INTO orders (id, item_id, buyer_id, seller_id, price, status, created_at) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    order.id(),
+                    order.itemId(),
+                    order.buyerId(),
+                    order.sellerId(),
+                    order.price(),
+                    order.status(),
+                    order.createdAt());
+        } else {
+            orders.put(order.id(), order);
+        }
         return order;
     }
 
     public OrderView getOrder(String orderId) {
+        if (jdbcTemplate != null) {
+            return jdbcTemplate.query(
+                    "SELECT id, item_id, buyer_id, seller_id, price, status, created_at "
+                            + "FROM orders WHERE id = ?",
+                    (resultSet, rowNum) -> new OrderView(
+                            resultSet.getString("id"),
+                            resultSet.getString("item_id"),
+                            resultSet.getString("buyer_id"),
+                            resultSet.getString("seller_id"),
+                            resultSet.getBigDecimal("price"),
+                            resultSet.getString("status"),
+                            resultSet.getTimestamp("created_at").toInstant()),
+                    orderId).stream().findFirst().orElseThrow(() -> new OrderNotFoundException(orderId));
+        }
         OrderView order = orders.get(orderId);
         if (order == null) {
             throw new OrderNotFoundException(orderId);
