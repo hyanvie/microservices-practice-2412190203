@@ -410,3 +410,24 @@ curl -i http://localhost:8080/api/orders/{orderId}
 - [第2周：项目选题与功能规划](docs/homework/week-02/index.md)
 - [第3周：项目提案与 Spring Boot 起步](docs/homework/week-03/index.md)
 - [第4周：单体应用与数据库持久化](docs/homework/week-04/index.md)
+- [第6周：微服务拆分](docs/homework/week-06/index.md)
+
+### 第六周微服务本地测试
+
+三个服务分别是 `user-service`（8083）、`item-service`（8081）和
+`order-service`（8082）。每个服务都有独立的 `pom.xml`、配置、Controller、
+Service 和测试。
+
+在仓库根目录执行测试：
+
+```bash
+./monolith/mvnw -B -f services/user-service/pom.xml test
+./monolith/mvnw -B -f services/item-service/pom.xml test
+./monolith/mvnw -B -f services/order-service/pom.xml test
+```
+
+`order-service` 的 `ITEM_SERVICE_URL` 默认指向
+`http://localhost:8081`，可以通过环境变量覆盖。连接超时和读取超时分别由
+`ITEM_CONNECT_TIMEOUT_MS`、`ITEM_READ_TIMEOUT_MS` 配置。创建订单前，
+订单服务使用 `RestTemplate` 查询商品；商品不存在或商品服务不可用时返回
+明确错误，不保存本地订单。

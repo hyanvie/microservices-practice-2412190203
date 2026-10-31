@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: order-service
+
+server:
+  port: ${SERVER_PORT:8082}
+
+clients:
+  item:
+    base-url: ${ITEM_SERVICE_URL:http://localhost:8081}
+    connect-timeout-ms: ${ITEM_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${ITEM_READ_TIMEOUT_MS:2000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
