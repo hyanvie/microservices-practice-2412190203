@@ -25,13 +25,15 @@ test -f docs/microservices-design.md
 grep -E "item-service|order-service|user-service" docs/microservices-design.md
 ```
 
-后续服务工程完成后，统一从仓库根目录运行：
+三个服务的本地编排和跨服务烟测从仓库根目录运行：
 
 ```bash
 ./scripts/smoke-test.sh
 ```
 
-每个服务的测试命令会在 README 和本文件中记录。
+脚本会构建并启动三个服务，检查三个 Actuator 健康接口，再通过
+`order-service -> item-service` 的真实 HTTP 调用创建一笔订单，最后自动停止
+本次启动的容器。
 
 ## 2. 代码拆分
 
@@ -49,6 +51,10 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 商品服务连接失败返回 `503 Service Unavailable`，校验失败时不会写入订单。
 服务地址、连接超时和读取超时都可以通过环境变量覆盖。
 
+当前代码的商品、用户和订单数据仍由各服务进程内存保存，尚未接入独立数据库
+和真实数据表。因此“独立数据归属”已在设计和接口边界中完成，但数据库落地
+仍是本小节未完成项，不能用当前实现声称该评分点已全部通过。
+
 ### 运行和验证
 
 在仓库根目录运行每个服务的测试：
@@ -61,3 +67,13 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 
 三个服务测试均通过，结果为 `BUILD SUCCESS`。其中订单服务测试覆盖了商品
 服务校验成功后创建订单，以及商品服务不可用时不返回成功订单。
+
+也可以运行完整烟测：
+
+```bash
+./scripts/smoke-test.sh
+```
+
+截图待补：请按仓库根目录运行烟测后，截取终端中三个健康检查和
+`cross-service order smoke test passed` 的完整输出，保存到
+`docs/homework/week-06/screenshots/02-smoke-test-success.png`。
