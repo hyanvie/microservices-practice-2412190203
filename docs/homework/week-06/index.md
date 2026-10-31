@@ -16,7 +16,9 @@
 
 ### 当前完成情况
 
-服务边界设计已完成，三个独立工程也已创建，并补充了基础 HTTP 协作。
+服务边界设计已完成：已完成单体模块映射、三个服务的职责与数据归属、服务调用
+关系和 Mermaid 架构图。设计中的独立数据库和数据表归属已明确，但数据库接入
+属于后续代码实现工作，不能将当前内存版服务描述为已经完成持久化。
 
 ### 设计文档检查
 
@@ -24,6 +26,9 @@
 test -f docs/microservices-design.md
 grep -E "item-service|order-service|user-service" docs/microservices-design.md
 ```
+
+上述命令用于核对设计文档存在且包含三个服务；文档中的设计验收清单和架构图
+同时作为本小节的 GitHub 交付证据。
 
 三个服务的本地编排和跨服务烟测从仓库根目录运行：
 
@@ -74,6 +79,9 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 ./scripts/smoke-test.sh
 ```
 
-截图待补：请按仓库根目录运行烟测后，截取终端中三个健康检查和
-`cross-service order smoke test passed` 的完整输出，保存到
-`docs/homework/week-06/screenshots/02-smoke-test-success.png`。
+验证截图已保存到 `screenshots/`：
+
+- `01-user-services-test-success.png`：user-service 测试通过。
+- `02-item-services-test-success.png`：item-service 测试通过。
+- `03-order-services-test-success.png`：order-service 测试通过。
+- `04-smoke-test-success.png`：三个健康检查和跨服务下单烟测通过。
