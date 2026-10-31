@@ -103,13 +103,45 @@ curl -i http://localhost:8080/api/orders/{orderId}
 
 ## 4. 数据持久化验证
 
-由 MySQL 挂载卷 `mysql-data` 负责持久化业务数据。验证步骤如下：
+本次使用订单接口创建的数据进行验证。订单
+`d316a350-8c8b-481d-b837-5e063fd6426a` 的关键字段为：
+`buyerId=buyer-1001`、`itemId=item-1001`、`price=35.00`、
+`status=PENDING_PAYMENT`。
+
+重建前查询：
 
 ```bash
-docker exec -it secondlight-mysql mysql -u root -prootpass -e "USE secondlight; SHOW TABLES; SELECT id, title, status FROM items;"
+curl -i http://localhost:8080/api/orders/d316a350-8c8b-481d-b837-5e063fd6426a
 ```
 
-如果服务重启或容器重建后仍能看到 `items`、`orders` 表及已创建的订单记录，说明数据持久化配置正确。
+然后删除并重新创建容器。这里不能使用 `-v`，否则会删除 MySQL
+数据卷：
+
+```bash
+docker compose down
+docker compose up -d
+docker compose ps
+```
+
+等待 `secondlight-mysql` 显示 `healthy`、应用启动后，再查询同一条订单：
+
+```bash
+curl -i http://localhost:8080/api/orders/d316a350-8c8b-481d-b837-5e063fd6426a
+```
+
+重建后仍返回 `200`，并且订单 ID、买家、商品、价格和状态都没有变化，
+说明命名卷 `mysql-data` 保存了 MySQL 数据。MySQL 表和数据也可以用下面的
+命令检查：
+
+```bash
+docker exec secondlight-mysql mysql -u root -prootpass -e "USE secondlight; SHOW TABLES; SELECT id, title, status FROM items;"
+```
+
+本小步建议保存以下截图：
+
+- `08-persistence-before.png`：容器删除前查询订单，显示 `200` 和完整订单 JSON。
+- `09-persistence-after.png`：执行 `docker compose down`、`docker compose up -d`
+  后，再查询相同订单，显示相同 ID 和关键字段。
 
 ## 5. 运行结果标记
 
