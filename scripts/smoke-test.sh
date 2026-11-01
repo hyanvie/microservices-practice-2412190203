@@ -31,6 +31,28 @@ wait_for_database() {
   return 1
 }
 
+expect_http_status() {
+  local method="$1"
+  local url="$2"
+  local expected="$3"
+  local body="${4:-}"
+  local actual
+
+  if [ -n "$body" ]; then
+    actual="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+      -X "$method" -H 'Content-Type: application/json' -d "$body" "$url")"
+  else
+    actual="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+      -X "$method" "$url")"
+  fi
+
+  if [ "$actual" != "$expected" ]; then
+    printf '%s expected HTTP %s but received %s\n' "$url" "$expected" "$actual" >&2
+    return 1
+  fi
+  printf '%s HTTP %s as expected\n' "$url" "$actual"
+}
+
 docker compose up -d --build
 trap 'docker compose down' EXIT
 
@@ -47,3 +69,14 @@ curl --fail --silent -X POST \
   -d '{"itemId":"item-1001","buyerId":"buyer-1001"}' \
   "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" >/dev/null
 printf 'cross-service order smoke test passed\n'
+
+expect_http_status POST \
+  "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" \
+  "409" \
+  '{"itemId":"missing-item","buyerId":"buyer-1001"}'
+
+docker compose stop item-service >/dev/null
+expect_http_status POST \
+  "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" \
+  "503" \
+  '{"itemId":"item-1002","buyerId":"buyer-1001"}'

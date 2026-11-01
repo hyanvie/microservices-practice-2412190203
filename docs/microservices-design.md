@@ -135,6 +135,8 @@ test -f docs/microservices-design.md
 grep -E "item-service|order-service|user-service" docs/microservices-design.md
 ```
 
-> 当前第六周代码已完成服务边界、独立工程、健康接口和订单到商品服务的真实 HTTP
-> 调用；服务数据暂存内存，尚未实现上述三个独立数据库和数据表。后续接入持久化时，
-> 需要分别在服务内部增加 Repository，不能跨服务复用 Repository。
+> 当前第六周代码已完成服务边界、独立工程、健康接口、三个独立 MySQL 数据库和
+> 订单到商品服务的真实 HTTP 调用。各服务通过自己的 `JdbcTemplate` 只访问所属
+> 数据库表；跨服务关联保存业务 ID，不跨库复用 Repository。订单服务当前的真实
+> HTTP 校验链路为 `order-service -> item-service`，用户服务边界和接口已独立，
+> 后续接入用户校验时仍应通过其公开 HTTP API。

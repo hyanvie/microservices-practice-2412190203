@@ -84,6 +84,8 @@ Controller、Service 和测试。订单服务在创建订单前通过 `RestTempl
 - `02-item-services-test-success.png`：item-service 测试通过。
 - `03-order-services-test-success.png`：order-service 测试通过。
 - `04-smoke-test-success.png`：三个健康检查和跨服务下单烟测通过。
+- `06-validation-success-and-failures.png`：跨服务成功下单、商品不存在的 `409`
+  和商品服务不可用的 `503`。
 
 ## 3. 本地编排
 
@@ -119,3 +121,38 @@ docker volume ls | grep microservices-practice-2412190203
 
 本地编排验证截图应保存为 `screenshots/05-compose-database-smoke-success.png`，
 内容应包含三个数据库健康检查、三个服务健康检查和跨服务下单烟测结果。
+
+## 4. 验证
+
+### 实现思路
+
+验证脚本从仓库根目录启动 Compose，依次检查三个数据库和三个服务的健康接口，
+再验证“订单服务查询商品后创建订单”的跨服务流程。脚本还覆盖两个失败场景：
+请求不存在的商品时订单服务返回 `409 Conflict`，商品服务停止后订单服务返回
+`503 Service Unavailable`。两种情况下都不会因依赖校验失败而写入本地订单。
+
+### 运行命令与结果
+
+```bash
+./scripts/smoke-test.sh
+```
+
+关键结果：
+
+| 场景 | 请求 | 预期状态码 | 数据变化 |
+|---|---|---:|---|
+| 健康检查 | `GET /actuator/health`（三个服务） | `200` | 服务可用 |
+| 跨服务成功 | `POST /api/orders`，商品 `item-1001` | `201` | `order-service` 的 `orders` 新增订单 |
+| 依赖资源不存在 | `POST /api/orders`，商品 `missing-item` | `409` | 不新增订单 |
+| 依赖服务不可用 | 停止 `item-service` 后 `POST /api/orders` | `503` | 不新增订单 |
+
+脚本输出 `cross-service order smoke test passed`、`HTTP 409 as expected` 和
+`HTTP 503 as expected`，验证截图保存为
+`screenshots/06-validation-success-and-failures.png`。
+
+### “远端成功、本地失败”窗口
+
+本流程先通过 HTTP 查询远端商品，再写入订单服务本地数据库。若未来把商品预留
+作为独立的远端写操作，可能出现“商品已预留，但订单本地写入失败”的窗口；
+本次作业只要求顺序验证，不实现跨服务原子事务、自动补偿或消息机制。因此实际
+系统需要后续通过幂等键、补偿动作或可靠消息处理该一致性问题。
