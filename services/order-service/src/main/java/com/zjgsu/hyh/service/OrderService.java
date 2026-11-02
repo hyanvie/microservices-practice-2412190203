@@ -1,40 +1,43 @@
 package com.zjgsu.hyh.service;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class OrderService {
 
     private final RestTemplate restTemplate;
-    private final String itemServiceUrl;
+    private final DiscoveryClient discoveryClient;
     private final Map<String, OrderView> orders = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbcTemplate;
 
     public OrderService(
             RestTemplate restTemplate,
-            @Value("${clients.item.base-url}") String itemServiceUrl) {
-        this(restTemplate, itemServiceUrl, null);
+            DiscoveryClient discoveryClient) {
+        this(restTemplate, discoveryClient, null);
     }
 
     @Autowired
     public OrderService(
             RestTemplate restTemplate,
-            @Value("${clients.item.base-url}") String itemServiceUrl,
+            DiscoveryClient discoveryClient,
             JdbcTemplate jdbcTemplate) {
         this.restTemplate = restTemplate;
-        this.itemServiceUrl = itemServiceUrl;
+        this.discoveryClient = discoveryClient;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -96,8 +99,17 @@ public class OrderService {
     }
 
     private ItemView fetchItem(String itemId) {
+        List<ServiceInstance> instances = discoveryClient.getInstances("item-service");
+        if (instances.isEmpty()) {
+            throw new DependencyUnavailableException("商品服务当前没有可用实例");
+        }
+        ServiceInstance instance = instances.get(0);
+        URI itemUri = UriComponentsBuilder.fromUri(instance.getUri())
+                .path("/api/items/{itemId}")
+                .buildAndExpand(itemId)
+                .toUri();
         try {
-            ItemView item = restTemplate.getForObject(itemServiceUrl + "/api/items/" + itemId, ItemView.class);
+            ItemView item = restTemplate.getForObject(itemUri, ItemView.class);
             if (item == null) {
                 throw new DependencyUnavailableException("商品服务返回了空响应");
             }

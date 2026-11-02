@@ -4,8 +4,8 @@
 
 本周在第六周已有的 `item-service`、`order-service` 和 `user-service` 中接入
 Nacos Discovery，并在根目录 `compose.yaml` 中增加 Nacos 3.2.4 编排。
-保留原有服务名、数据归属、接口和业务规则；本阶段只完成服务注册配置，
-跨服务调用改为服务发现的验证留待后续小节。
+保留原有服务名、数据归属、接口和业务规则；第一小节完成服务注册配置，
+第二小节将订单创建前的商品校验改为通过服务发现调用。
 
 ## Nacos 部署与初始化
 
@@ -31,6 +31,67 @@ docker compose up -d user-db item-db order-db user-service item-service order-se
 docker compose ps
 ```
 
+## 服务发现调用
+
+### 调用方向与隔离配置
+
+本项目选择“下单前校验商品”流程：
+
+```text
+order-service --DiscoveryClient--> item-service
+```
+
+三个服务使用默认命名空间 `public` 和统一分组 `DEFAULT_GROUP`。服务端地址、
+用户名和密码均通过环境变量注入；Compose 网络内使用 `NACOS_SERVER_ADDR=nacos:8848`，
+不把 Nacos 控制台或服务端地址写入业务调用代码。`order-service` 的
+`NACOS_DISCOVERY_ENABLED` 仅在 Compose 中设为 `true`，单元测试默认关闭真实
+注册中心连接。
+
+### 发现实现与错误语义
+
+`order-service` 每次创建订单时调用：
+
+```java
+discoveryClient.getInstances("item-service")
+```
+
+从当前实例列表选择一个实例，并将其 URI 与原业务路径
+`/api/items/{itemId}` 组合后调用。没有实例时返回 `503 Service Unavailable`；
+商品不存在仍保留原有 `409 Conflict` 业务响应；连接和读取超时继续由
+`ITEM_CONNECT_TIMEOUT_MS`、`ITEM_READ_TIMEOUT_MS` 控制。原固定地址
+`ITEM_SERVICE_URL` 已从配置和 Compose 中删除。
+
+### 测试与请求验证
+
+订单服务测试使用模拟的 `DiscoveryClient`，覆盖：
+
+- 发现 `item-service` 实例后使用实例 URI 请求商品并创建订单；
+- 商品服务请求失败时不保存订单；
+- 实例列表为空时返回 `DependencyUnavailableException`，不保存订单。
+
+从仓库根目录运行：
+
+```bash
+./monolith/mvnw -B -f services/order-service/pom.xml test
+```
+
+Compose 启动后，可使用宿主机端口验证真实业务请求：
+
+```bash
+curl -i http://localhost:18091/api/items/item-1001
+curl -i -X POST http://localhost:18092/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1001","buyerId":"buyer-1001"}'
+```
+
+预期商品请求返回 `200`，创建订单返回 `201`。停止 `item-service` 后再次
+创建订单应返回 `503`；恢复服务并等待重新注册后，创建订单恢复正常。
+
+第二小节截图应保存为：
+
+- `screenshots/04-discovery-instance-and-order-success.png`
+- `screenshots/05-discovery-empty-and-service-recovery.png`
+
 ## 注册结果记录
 
 启动业务服务后，在 Nacos 控制台的 `DEFAULT_GROUP` 中确认以下服务和实例：
@@ -46,8 +107,9 @@ IP。截图应隐藏 Token、密码等凭据。
 
 | 内容 | 截图 |
 |---|---|
-| Nacos 控制台服务列表、分组和三个实例 | 待补充 |
-| 三个业务服务健康检查 | 待补充 |
+| Nacos 控制台服务列表、分组和三个实例 | `screenshots/01-nacos-console-service-list.png` |
+| 三个业务服务健康检查 | `screenshots/02-compose-services-health.png` |
+| 三个服务注册日志 | `screenshots/03-nacos-registration-logs.png` |
 
 ## 本地测试
 

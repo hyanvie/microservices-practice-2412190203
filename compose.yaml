@@ -135,7 +135,6 @@ services:
       DB_URL: jdbc:mysql://order-db:3306/secondlight_order?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USERNAME: order_user
       DB_PASSWORD: order_pass
-      ITEM_SERVICE_URL: http://item-service:8081
       ITEM_CONNECT_TIMEOUT_MS: ${ITEM_CONNECT_TIMEOUT_MS:-1000}
       ITEM_READ_TIMEOUT_MS: ${ITEM_READ_TIMEOUT_MS:-2000}
       NACOS_SERVER_ADDR: nacos:8848

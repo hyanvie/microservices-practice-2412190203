@@ -427,11 +427,11 @@ Service 和测试。
 ./monolith/mvnw -B -f services/order-service/pom.xml test
 ```
 
-`order-service` 的 `ITEM_SERVICE_URL` 默认指向
-`http://localhost:8081`，可以通过环境变量覆盖。连接超时和读取超时分别由
-`ITEM_CONNECT_TIMEOUT_MS`、`ITEM_READ_TIMEOUT_MS` 配置。创建订单前，
-订单服务使用 `RestTemplate` 查询商品；商品不存在或商品服务不可用时返回
-明确错误，不保存本地订单。
+创建订单前，`order-service` 通过 `DiscoveryClient` 按服务名
+`item-service` 获取当前实例，再使用实例地址请求商品详情；不再配置固定的
+`ITEM_SERVICE_URL`。连接超时和读取超时分别由 `ITEM_CONNECT_TIMEOUT_MS`、
+`ITEM_READ_TIMEOUT_MS` 配置。商品不存在或商品服务无可用实例时返回明确错误，
+不会跳过校验保存订单。
 
 ### 第六周微服务 Compose 烟测
 

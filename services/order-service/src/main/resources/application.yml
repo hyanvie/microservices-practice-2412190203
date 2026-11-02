@@ -6,7 +6,7 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         username: ${NACOS_USERNAME:nacos}
-        password: ${NACOS_PASSWORD:nacos}
+        password: ${NACOS_PASSWORD:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         namespace: ${NACOS_NAMESPACE:}
         enabled: ${NACOS_DISCOVERY_ENABLED:false}
@@ -25,7 +25,6 @@ server:
 
 clients:
   item:
-    base-url: ${ITEM_SERVICE_URL:http://localhost:8081}
     connect-timeout-ms: ${ITEM_CONNECT_TIMEOUT_MS:1000}
     read-timeout-ms: ${ITEM_READ_TIMEOUT_MS:2000}
 

@@ -6,7 +6,7 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         username: ${NACOS_USERNAME:nacos}
-        password: ${NACOS_PASSWORD:nacos}
+        password: ${NACOS_PASSWORD:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         namespace: ${NACOS_NAMESPACE:}
         enabled: ${NACOS_DISCOVERY_ENABLED:false}
