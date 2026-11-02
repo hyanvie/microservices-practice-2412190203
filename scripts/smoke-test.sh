@@ -59,24 +59,24 @@ trap 'docker compose down' EXIT
 wait_for_database "secondlight-user-db"
 wait_for_database "secondlight-item-db"
 wait_for_database "secondlight-order-db"
-wait_for_health "http://localhost:${USER_SERVICE_PORT:-8083}/actuator/health" "user-service"
-wait_for_health "http://localhost:${ITEM_SERVICE_PORT:-8081}/actuator/health" "item-service"
-wait_for_health "http://localhost:${ORDER_SERVICE_PORT:-8082}/actuator/health" "order-service"
+wait_for_health "http://localhost:${USER_SERVICE_PORT:-18093}/actuator/health" "user-service"
+wait_for_health "http://localhost:${ITEM_SERVICE_PORT:-18091}/actuator/health" "item-service"
+wait_for_health "http://localhost:${ORDER_SERVICE_PORT:-18092}/actuator/health" "order-service"
 
-curl --fail --silent "http://localhost:${ITEM_SERVICE_PORT:-8081}/api/items/item-1001" >/dev/null
+curl --fail --silent "http://localhost:${ITEM_SERVICE_PORT:-18091}/api/items/item-1001" >/dev/null
 curl --fail --silent -X POST \
   -H 'Content-Type: application/json' \
   -d '{"itemId":"item-1001","buyerId":"buyer-1001"}' \
-  "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" >/dev/null
+  "http://localhost:${ORDER_SERVICE_PORT:-18092}/api/orders" >/dev/null
 printf 'cross-service order smoke test passed\n'
 
 expect_http_status POST \
-  "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" \
+  "http://localhost:${ORDER_SERVICE_PORT:-18092}/api/orders" \
   "409" \
   '{"itemId":"missing-item","buyerId":"buyer-1001"}'
 
 docker compose stop item-service >/dev/null
 expect_http_status POST \
-  "http://localhost:${ORDER_SERVICE_PORT:-8082}/api/orders" \
+  "http://localhost:${ORDER_SERVICE_PORT:-18092}/api/orders" \
   "503" \
   '{"itemId":"item-1002","buyerId":"buyer-1001"}'

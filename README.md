@@ -411,6 +411,7 @@ curl -i http://localhost:8080/api/orders/{orderId}
 - [第3周：项目提案与 Spring Boot 起步](docs/homework/week-03/index.md)
 - [第4周：单体应用与数据库持久化](docs/homework/week-04/index.md)
 - [第6周：微服务拆分](docs/homework/week-06/index.md)
+- [第7周：Nacos 服务注册与发现](docs/homework/week-07/index.md)
 
 ### 第六周微服务本地测试
 
@@ -443,3 +444,47 @@ Service 和测试。
 脚本会检查三个 MySQL 数据库和 `8081`、`8082`、`8083` 的健康接口，并验证
 订单服务通过 Compose 服务名调用商品服务后才能创建订单。三个服务分别使用
 独立数据库、账号和命名数据卷，跨服务不直接读写其他服务的数据表。
+
+### 第七周 Nacos 服务注册
+
+本周在三个既有微服务中接入 Nacos Discovery，服务名保持为
+`user-service`、`item-service` 和 `order-service`。Nacos 使用
+`nacos/nacos-server:v3.2.4`，控制台、服务端和 SDK 通信端口分别为
+`18081`、`18848` 和 `19848`（容器内仍为 `8080`、`8848` 和 `9848`）。业务服务只配置 Discovery Starter，不引入
+Config Starter；测试仍不依赖真实 Nacos 或 MySQL。
+
+先准备本地环境变量。不要把 `.env` 提交到 Git；其中
+`NACOS_AUTH_TOKEN` 应使用本地随机的 Base64 密钥，`NACOS_USERNAME` 和
+`NACOS_PASSWORD` 填写 Nacos 管理员初始化并改密后的账号密码：
+
+```powershell
+Copy-Item .env.example .env
+# 编辑 .env，替换所有 replace-with-* 占位值
+```
+
+按“先初始化、后注册”的顺序启动：
+
+```bash
+# 1. 只启动 Nacos
+docker compose up -d nacos
+docker compose ps nacos
+
+# 2. Nacos 3.2 首次没有默认管理员密码，先通过本地 API 初始化
+$env:NACOS_ADMIN_PASSWORD = "replace-with-a-local-password"
+curl.exe -X POST http://localhost:18848/nacos/v3/auth/user/admin `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data-urlencode "password=$env:NACOS_ADMIN_PASSWORD"
+# 3. 浏览器打开 http://localhost:18081，用 nacos 和该密码登录控制台
+# 4. 将该密码写入 .env 的 NACOS_PASSWORD，再启动数据库和三个业务服务
+docker compose up -d user-db item-db order-db user-service item-service order-service
+docker compose ps
+```
+
+控制台的服务列表应在 `DEFAULT_GROUP` 中显示三个服务及实例地址：
+`user-service:8083`、`item-service:8081`、`order-service:8082`。服务健康检查
+分别为 `http://localhost:18093/actuator/health`、
+`http://localhost:18091/actuator/health` 和
+`http://localhost:18092/actuator/health`。完成截图后，可运行根目录的
+`bash scripts/smoke-test.sh` 做完整验证。
+
+第七周部署记录和截图见 [第七周作业记录](docs/homework/week-07/index.md)。
