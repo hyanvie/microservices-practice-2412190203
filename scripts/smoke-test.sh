@@ -18,6 +18,20 @@ wait_for_health() {
   return 1
 }
 
+wait_for_url() {
+  local url="$1"
+  local name="$2"
+  for _ in {1..30}; do
+    if curl --fail --silent --output /dev/null "$url"; then
+      printf '%s reachable\n' "$name"
+      return 0
+    fi
+    sleep 2
+  done
+  printf '%s is unreachable\n' "$name" >&2
+  return 1
+}
+
 wait_for_database() {
   local container="$1"
   for _ in {1..30}; do
@@ -55,12 +69,13 @@ expect_http_status() {
 
 order_count() {
   docker compose exec -T order-db \
-    mysql -uorder_user -porder_pass -Nse 'SELECT COUNT(*) FROM orders'
+    sh -c 'MYSQL_PWD=order_pass mysql -uorder_user secondlight_order -Nse "SELECT COUNT(*) FROM orders"'
 }
 
 docker compose up -d --build
 trap 'docker compose down' EXIT
 
+wait_for_url "http://localhost:${NACOS_CONSOLE_PORT:-18081}/" "Nacos console"
 wait_for_database "secondlight-user-db"
 wait_for_database "secondlight-item-db"
 wait_for_database "secondlight-order-db"

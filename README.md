@@ -441,7 +441,9 @@ Service 和测试。
 ./scripts/smoke-test.sh
 ```
 
-脚本会检查三个 MySQL 数据库和三个 Actuator 健康接口，并验证订单服务通过
+脚本会检查实际映射的 Nacos 控制台
+`http://localhost:${NACOS_CONSOLE_PORT:-18081}/`、三个 MySQL 数据库和三个
+Actuator 健康接口，并验证订单服务通过
 服务发现调用商品服务、商品服务下线后的 `503`、失败请求不新增订单，以及
 商品服务恢复后的 `201`。三个服务分别使用
 独立数据库、账号和命名数据卷，跨服务不直接读写其他服务的数据表。
@@ -487,5 +489,18 @@ docker compose ps
 `http://localhost:18091/actuator/health` 和
 `http://localhost:18092/actuator/health`。完成截图后，可运行根目录的
 `bash scripts/smoke-test.sh` 做完整验证。
+
+测试时各服务的 `NACOS_DISCOVERY_ENABLED` 默认值为 `false`，单元测试不会连接
+真实 Nacos；订单服务测试使用模拟的 `DiscoveryClient` 和远程商品响应。分别进入
+各服务目录执行：
+
+```bash
+cd services/user-service && ../../monolith/mvnw -B test
+cd ../item-service && ../../monolith/mvnw -B test
+cd ../order-service && ../../monolith/mvnw -B test
+```
+
+烟测脚本从仓库根目录执行，任一控制台、数据库、健康接口或业务断言失败都会以
+非零状态退出，不会继续报告成功。
 
 第七周部署记录和截图见 [第七周作业记录](docs/homework/week-07/index.md)。

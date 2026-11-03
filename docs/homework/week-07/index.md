@@ -141,7 +141,7 @@ curl -i -X POST http://localhost:18092/api/orders \
 
 ```bash
 docker compose exec -T order-db \
-  mysql -uorder_user -porder_pass -Nse 'SELECT COUNT(*) FROM orders'
+  sh -c 'MYSQL_PWD=order_pass mysql -uorder_user secondlight_order -Nse "SELECT COUNT(*) FROM orders"'
 ```
 
 健康状态与注册状态不是同一个概念：
@@ -196,3 +196,33 @@ Compose 烟测从仓库根目录执行：
 ```bash
 bash scripts/smoke-test.sh
 ```
+
+第四小节脚本验证结论：
+
+- 脚本先检查实际映射的 Nacos 控制台
+  `http://localhost:${NACOS_CONSOLE_PORT:-18081}/`，没有使用服务端
+  `8848/nacos` 作为宿主机控制台地址。
+- 脚本检查三个 MySQL 容器和 `user-service`、`item-service`、
+  `order-service` 的 `/actuator/health`，任一检查失败都会返回非零状态。
+- 脚本随后验证正常创建订单、商品服务下线后的 `503`、失败请求不新增订单，
+  以及服务恢复后的 `201`；控制台可访问不替代这些业务验证。
+
+第四小节测试命令：
+
+```bash
+cd services/user-service && ../../monolith/mvnw -B test
+cd ../item-service && ../../monolith/mvnw -B test
+cd ../order-service && ../../monolith/mvnw -B test
+```
+
+单元测试默认使用各服务配置中的 `NACOS_DISCOVERY_ENABLED=false`，不连接真实
+Nacos；订单服务通过模拟 `DiscoveryClient` 和远程商品响应覆盖服务发现及失败
+分支。脚本和测试均不打印 Nacos 密码或 Token。
+
+第四小节运行结果：脚本成功退出（状态码 `0`），并完成控制台可访问、三服务
+健康、业务成功、依赖下线失败和恢复成功检查。
+
+第四小节截图建议保存为：
+
+- `screenshots/08-smoke-test-success.png`
+- `screenshots/09-service-tests-success.png`
