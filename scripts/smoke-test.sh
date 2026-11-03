@@ -53,6 +53,11 @@ expect_http_status() {
   printf '%s HTTP %s as expected\n' "$url" "$actual"
 }
 
+order_count() {
+  docker compose exec -T order-db \
+    mysql -uorder_user -porder_pass -Nse 'SELECT COUNT(*) FROM orders'
+}
+
 docker compose up -d --build
 trap 'docker compose down' EXIT
 
@@ -75,8 +80,25 @@ expect_http_status POST \
   "409" \
   '{"itemId":"missing-item","buyerId":"buyer-1001"}'
 
+before_unavailable_count="$(order_count)"
 docker compose stop item-service >/dev/null
 expect_http_status POST \
   "http://localhost:${ORDER_SERVICE_PORT:-18092}/api/orders" \
   "503" \
   '{"itemId":"item-1002","buyerId":"buyer-1001"}'
+after_unavailable_count="$(order_count)"
+if [ "$before_unavailable_count" != "$after_unavailable_count" ]; then
+  printf 'order count changed after unavailable dependency: %s -> %s\n' \
+    "$before_unavailable_count" "$after_unavailable_count" >&2
+  exit 1
+fi
+printf 'failed dependency request did not create an order\n'
+
+docker compose start item-service >/dev/null
+wait_for_health "http://localhost:${ITEM_SERVICE_PORT:-18091}/actuator/health" "item-service after recovery"
+sleep 10
+expect_http_status POST \
+  "http://localhost:${ORDER_SERVICE_PORT:-18092}/api/orders" \
+  "201" \
+  '{"itemId":"item-1002","buyerId":"buyer-1001"}'
+printf 'service recovery smoke test passed\n'

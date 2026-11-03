@@ -92,6 +92,76 @@ curl -i -X POST http://localhost:18092/api/orders \
 - `screenshots/04-discovery-instance-and-order-success.png`
 - `screenshots/05-discovery-empty-and-service-recovery.png`
 
+## 健康状态、服务下线与恢复
+
+三个业务服务均保留 Actuator 健康端点，分别通过宿主机端口访问：
+
+```bash
+curl -i http://localhost:18093/actuator/health
+curl -i http://localhost:18091/actuator/health
+curl -i http://localhost:18092/actuator/health
+```
+
+服务正常时返回 HTTP `200`，响应中的 `status` 为 `UP`。第三小节使用与第二
+小节相同的调用方向 `order-service -> item-service`，验证步骤如下：
+
+```bash
+# 1. 依赖正常：商品校验成功并创建订单
+curl -i -X POST http://localhost:18092/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1001","buyerId":"buyer-health-1001"}'
+
+# 2. 停止被调用服务，等待 Nacos 实例列表移除 item-service
+docker compose stop item-service
+sleep 30
+curl -i -X POST http://localhost:18092/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1002","buyerId":"buyer-health-1002"}'
+
+# 3. 恢复服务，等待健康检查和重新注册
+docker compose start item-service
+curl -i http://localhost:18091/actuator/health
+sleep 30
+curl -i -X POST http://localhost:18092/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"item-1002","buyerId":"buyer-health-1003"}'
+```
+
+实际结果记录：
+
+- 依赖正常时，订单创建返回 HTTP `201`，订单服务的 `orders` 表新增一条
+  `PENDING_PAYMENT` 记录。
+- `item-service` 停止并从 Nacos 实例列表消失后，订单请求返回 HTTP `503`，
+  错误为“商品服务当前没有可用实例”；商品校验失败发生在订单插入之前，
+  `orders` 表记录数保持不变。
+- `item-service` 恢复后，`/actuator/health` 返回 HTTP `200` 且状态为 `UP`，
+  Nacos 重新显示实例，订单请求恢复返回 HTTP `201`。
+
+可用以下命令核对失败请求没有新增本地订单记录：
+
+```bash
+docker compose exec -T order-db \
+  mysql -uorder_user -porder_pass -Nse 'SELECT COUNT(*) FROM orders'
+```
+
+健康状态与注册状态不是同一个概念：
+
+- **SDK 连接存活**表示业务服务中的 Nacos 客户端仍能与 Nacos 通信，能够
+  发送心跳、获取服务实例或执行注册操作。
+- **Nacos 实例状态**表示 Nacos 根据实例心跳和临时实例机制判断该服务实例
+  是否仍在注册列表中；服务停止后通常需要等待心跳超时，列表才会变化。
+- **Actuator 应用健康**表示 Spring Boot 应用及其健康检查组件当前是否可用，
+  例如返回 `UP` 或 `DOWN`。Actuator 返回 `DOWN` 不会自动保证 Nacos 立即
+  摘除实例，除非另外配置健康状态联动或服务主动注销。
+
+本验证没有破坏数据库或模拟网络分区；服务发现只负责定位实例，不能消除
+跨服务写操作的部分成功事务窗口，本项目也未实现自动补偿或分布式事务。
+
+第三小节截图建议保存为：
+
+- `screenshots/06-actuator-health-up.png`
+- `screenshots/07-service-down-failure-and-recovery.png`
+
 ## 注册结果记录
 
 启动业务服务后，在 Nacos 控制台的 `DEFAULT_GROUP` 中确认以下服务和实例：
