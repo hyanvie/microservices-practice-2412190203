@@ -54,10 +54,10 @@ bash scripts/e2e-test.sh
 从仓库根目录执行订单服务测试：
 
 ```bash
-bash monolith/mvnw -B -f services/order-service/pom.xml test
+bash monolith/mvnw -B -f services/order-service/pom.xml clean test
 ```
 
-结果：4 项测试通过，覆盖成功读取商品并创建订单、商品不存在映射、Feign 依赖故障映射，以及商品不可购买时不写订单。
+结果：`BUILD SUCCESS`，`Tests run: 4, Failures: 0, Errors: 0, Skipped: 0`。4 项用例分别覆盖成功读取商品并创建订单、商品不存在映射为 `409`、Feign 依赖故障映射为 `503`，以及商品不可购买时不写订单。
 
 需要 Docker、Nacos 和本地 `.env` 才能运行完整服务发现及双实例验证：
 
@@ -69,4 +69,18 @@ bash scripts/e2e-test.sh
 
 ### 截图
 
-尚未生成截图。需要补充 Feign 客户端服务名/接口路径及订单服务测试通过记录的真实截图，并保存到 `screenshots/` 后再作为作业截图提交。
+![OpenFeign 客户端按服务名声明调用](screenshots/01-openfeign-client.png)
+
+`ItemClient` 使用 `@FeignClient(name = "item-service", path = "/api/items")`，未出现任何容器 IP。
+
+![远程调用失败处理](screenshots/02-feign-error-handling.png)
+
+`OrderService#fetchItem` 将远程 `404` 转为 `409` 业务冲突，其余 Feign 异常转为 `503` 依赖不可用；`OrderExceptionHandler` 负责输出对应状态码。
+
+![单元测试运行结果](screenshots/03-openfeign-tests.png)
+
+`surefire` 执行 4 项测试全部通过，`BUILD SUCCESS`。
+
+![OpenFeign 依赖与超时配置](screenshots/04-openfeign-config.png)
+
+`spring-cloud-starter-openfeign`、`spring-cloud-starter-loadbalancer` 依赖，以及 `item-service` 的连接与读取超时配置。
