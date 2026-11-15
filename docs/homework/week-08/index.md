@@ -40,3 +40,33 @@ bash scripts/e2e-test.sh
 - Bash 语法、`docker compose config --quiet` 和 `git diff --check` 检查通过。
 - Compose 端到端与双实例负载均衡及故障恢复：本环境的 WSL 未安装/接入 Docker CLI，`bash scripts/e2e-test.sh` 在前置检查处退出，没有启动或停止容器；脚本包含进度 PPT 中的 `503` 下线和 `201` 恢复检查，仍需在 Docker 可用的环境实际运行。
 - 截图尚未生成。Docker 环境验证通过后，将脚本输出及两个商品服务实例截图保存至 `screenshots/01-e2e-load-balancing.png`；截图中不得出现 Nacos 密码、Token 或其他凭据。
+
+## 使用 OpenFeign
+
+### 实现思路
+
+调用方为 `order-service`，被调用方为 `item-service`。订单服务中的 `ItemClient` 使用 `@FeignClient(name = "item-service", path = "/api/items")` 按 Nacos 服务名声明调用契约，通过 `GET /{itemId}` 查询商品；Spring Cloud LoadBalancer 根据服务发现结果选择实例，不在客户端写死容器 IP。OpenFeign 连接和读取超时分别由 `ITEM_CONNECT_TIMEOUT_MS`、`ITEM_READ_TIMEOUT_MS` 配置。
+
+订单服务仅在商品查询成功且商品在售时保存订单。商品服务返回 `404` 时转换为清晰的 `409` 商品业务错误；其他 Feign 调用异常（例如服务无可用实例时的 `503`）转换为“商品服务暂时不可用”，并返回 HTTP `503`。两种失败路径都在订单写入前结束。实现与调用失败映射见 [OrderService](../../../services/order-service/src/main/java/com/zjgsu/hyh/service/OrderService.java)；Feign 契约见 [ItemClient](../../../services/order-service/src/main/java/com/zjgsu/hyh/client/ItemClient.java)。
+
+### 运行命令与结果
+
+从仓库根目录执行订单服务测试：
+
+```bash
+bash monolith/mvnw -B -f services/order-service/pom.xml test
+```
+
+结果：4 项测试通过，覆盖成功读取商品并创建订单、商品不存在映射、Feign 依赖故障映射，以及商品不可购买时不写订单。
+
+需要 Docker、Nacos 和本地 `.env` 才能运行完整服务发现及双实例验证：
+
+```bash
+bash scripts/e2e-test.sh
+```
+
+当前记录中的真实运行限制：WSL 环境没有 Docker CLI，端到端测试尚未执行；上述单元测试不等同于真实 Nacos/多实例联调。
+
+### 截图
+
+尚未生成截图。需要补充 Feign 客户端服务名/接口路径及订单服务测试通过记录的真实截图，并保存到 `screenshots/` 后再作为作业截图提交。
