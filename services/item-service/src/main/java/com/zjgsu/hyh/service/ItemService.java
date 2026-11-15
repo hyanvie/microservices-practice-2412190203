@@ -3,6 +3,8 @@ package com.zjgsu.hyh.service;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ItemService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ItemService.class);
     private final Map<String, ItemView> items = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbcTemplate;
 
@@ -25,6 +28,7 @@ public class ItemService {
     }
 
     public ItemView getItem(String itemId) {
+        LOGGER.debug("item-service request itemId={}", itemId);
         if (jdbcTemplate != null) {
             return jdbcTemplate.query(
                     "SELECT id, title, price, seller_id, on_sale FROM items WHERE id = ?",

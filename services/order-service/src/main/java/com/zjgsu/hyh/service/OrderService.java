@@ -1,43 +1,31 @@
 package com.zjgsu.hyh.service;
 
+import com.zjgsu.hyh.client.ItemClient;
+import com.zjgsu.hyh.client.ItemView;
+import feign.FeignException;
 import java.math.BigDecimal;
-import java.net.URI;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.ServiceInstance;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class OrderService {
 
-    private final RestTemplate restTemplate;
-    private final DiscoveryClient discoveryClient;
+    private final ItemClient itemClient;
     private final Map<String, OrderView> orders = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbcTemplate;
 
-    public OrderService(
-            RestTemplate restTemplate,
-            DiscoveryClient discoveryClient) {
-        this(restTemplate, discoveryClient, null);
+    public OrderService(ItemClient itemClient) {
+        this(itemClient, null);
     }
 
     @Autowired
-    public OrderService(
-            RestTemplate restTemplate,
-            DiscoveryClient discoveryClient,
-            JdbcTemplate jdbcTemplate) {
-        this.restTemplate = restTemplate;
-        this.discoveryClient = discoveryClient;
+    public OrderService(ItemClient itemClient, JdbcTemplate jdbcTemplate) {
+        this.itemClient = itemClient;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -99,25 +87,16 @@ public class OrderService {
     }
 
     private ItemView fetchItem(String itemId) {
-        List<ServiceInstance> instances = discoveryClient.getInstances("item-service");
-        if (instances.isEmpty()) {
-            throw new DependencyUnavailableException("商品服务当前没有可用实例");
-        }
-        ServiceInstance instance = instances.get(0);
-        URI itemUri = UriComponentsBuilder.fromUri(instance.getUri())
-                .path("/api/items/{itemId}")
-                .buildAndExpand(itemId)
-                .toUri();
         try {
-            ItemView item = restTemplate.getForObject(itemUri, ItemView.class);
+            ItemView item = itemClient.getItem(itemId);
             if (item == null) {
                 throw new DependencyUnavailableException("商品服务返回了空响应");
             }
             return item;
-        } catch (HttpClientErrorException.NotFound exception) {
-            throw new InvalidOrderException("商品不存在：" + itemId);
-        } catch (RestClientException exception) {
-            throw new DependencyUnavailableException("商品服务暂时不可用");
+        } catch (FeignException.NotFound exception) {
+            throw new InvalidOrderException("商品不存在：" + itemId, exception);
+        } catch (FeignException exception) {
+            throw new DependencyUnavailableException("商品服务暂时不可用", exception);
         }
     }
 
@@ -131,13 +110,14 @@ public class OrderService {
             Instant createdAt) {
     }
 
-    public record ItemView(String id, BigDecimal price, String sellerId, boolean onSale) {
-    }
-
     public static class InvalidOrderException extends RuntimeException {
 
         public InvalidOrderException(String message) {
             super(message);
+        }
+
+        public InvalidOrderException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
@@ -145,6 +125,10 @@ public class OrderService {
 
         public DependencyUnavailableException(String message) {
             super(message);
+        }
+
+        public DependencyUnavailableException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
