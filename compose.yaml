@@ -106,7 +106,7 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8081
-      LOGGING_LEVEL_COM_ZJGSU_HYH_SERVICE_ITEMSERVICE: ${ITEM_SERVICE_LOG_LEVEL:-INFO}
+      ITEM_SERVICE_LOG_LEVEL: ${ITEM_SERVICE_LOG_LEVEL:-INFO}
       DB_URL: jdbc:mysql://item-db:3306/secondlight_item?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USERNAME: item_user
       DB_PASSWORD: item_pass

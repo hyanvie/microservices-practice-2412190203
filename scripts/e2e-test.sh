@@ -9,7 +9,7 @@ if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ -n "$(docker compose ps -q)" ]; then
+if [ -n "$(docker compose ps -q nacos user-db item-db order-db user-service item-service order-service)" ]; then
   printf '已有 Compose 服务正在运行；请先停止后再执行端到端测试。\n' >&2
   exit 1
 fi

@@ -75,6 +75,6 @@ bash monolith/mvnw -B -f services/order-service/pom.xml test
 bash scripts/e2e-test.sh
 ```
 
-脚本使用根目录 `compose.yaml`，将商品服务扩容为两个实例，并临时使用随机宿主机端口避免端口冲突。它检查两实例健康、真实下单 JSON、错误商品不落订单，以及同一批 Feign 请求确实到达两个实例；随后停止两个实例，验证依赖不可用时返回 `503` 且不落订单，再启动实例验证恢复后返回 `201`。脚本退出时移除本次 Compose 容器和网络，不删除数据库卷；如果当前项目已有运行中的 Compose 容器，脚本会先退出，避免打断已有环境。
+脚本使用根目录 `compose.yaml`，将商品服务扩容为两个实例，并临时使用随机宿主机端口避免端口冲突。它检查两实例健康、真实下单 JSON、错误商品不落订单，以及同一批 Feign 请求确实到达两个实例；随后停止两个实例，验证依赖不可用时返回 `503` 且不落订单，再启动实例验证恢复后返回 `201`。脚本退出时移除本次 Compose 容器和网络，不删除数据库卷；如果本项目的服务已在运行，脚本会先退出，避免打断已有环境。
 
-本地完成验证后，可将运行记录截图保存为 `docs/homework/week-08/screenshots/` 下的 `01-e2e-load-balancing.png`。不要将 `.env` 中的凭据放入截图。
+运行记录见 `week-08/index.md` 的“负载均衡验证”一节，截图为 `screenshots/05-lb-instances.png`、`06-lb-request-distribution.png`、`07-lb-e2e-result.png`。截图中不含 `.env` 凭据。

@@ -37,9 +37,7 @@ bash scripts/e2e-test.sh
 
 - 订单服务单元测试：`bash monolith/mvnw -B -f services/order-service/pom.xml test`，4 项测试通过。
 - 商品服务回归测试：`bash monolith/mvnw -B -f services/item-service/pom.xml test`，1 项测试通过。
-- Bash 语法、`docker compose config --quiet` 和 `git diff --check` 检查通过。
-- Compose 端到端与双实例负载均衡及故障恢复：本环境的 WSL 未安装/接入 Docker CLI，`bash scripts/e2e-test.sh` 在前置检查处退出，没有启动或停止容器；脚本包含进度 PPT 中的 `503` 下线和 `201` 恢复检查，仍需在 Docker 可用的环境实际运行。
-- 截图尚未生成。Docker 环境验证通过后，将脚本输出及两个商品服务实例截图保存至 `screenshots/01-e2e-load-balancing.png`；截图中不得出现 Nacos 密码、Token 或其他凭据。
+- Compose 端到端（Docker Compose、Nacos、MySQL 与商品服务双实例）：`bash scripts/e2e-test.sh` 实际运行通过，验证了双实例请求分配、依赖下线返回 `503` 以及恢复后创建订单返回 `201`。脚本退出时移除本次启动的容器和网络，命名数据卷保留。
 
 ## 使用 OpenFeign
 
@@ -65,7 +63,7 @@ bash monolith/mvnw -B -f services/order-service/pom.xml clean test
 bash scripts/e2e-test.sh
 ```
 
-当前记录中的真实运行限制：WSL 环境没有 Docker CLI，端到端测试尚未执行；上述单元测试不等同于真实 Nacos/多实例联调。
+端到端脚本已在 Docker 环境实际运行通过，结果见下文“负载均衡验证”。
 
 ### 截图
 
@@ -84,3 +82,53 @@ bash scripts/e2e-test.sh
 ![OpenFeign 依赖与超时配置](screenshots/04-openfeign-config.png)
 
 `spring-cloud-starter-openfeign`、`spring-cloud-starter-loadbalancer` 依赖，以及 `item-service` 的连接与读取超时配置。
+
+## 负载均衡验证
+
+### 实现思路
+
+`item-service` 不设置固定 `container_name`，宿主机端口由 `ITEM_SERVICE_PORT` 控制；端到端脚本把该变量设为 `0`，Docker 为每个副本分配不同端口，避免两个实例争用同一宿主机端口。`order-service` 通过 `item-service` 服务名和 Spring Cloud LoadBalancer 选择实例，不感知具体容器地址。
+
+每个副本在 `ItemService#getItem` 打印 `item-service request itemId=...`，日志级别由 `ITEM_SERVICE_LOG_LEVEL` 控制（默认 `INFO`，验证时设为 `DEBUG`）。分发是否真实发生以两个副本各自的请求日志为准，而不是只看 Nacos 注册列表。
+
+### 运行命令
+
+启动两个商品服务副本：
+
+```bash
+ITEM_SERVICE_PORT=0 ITEM_SERVICE_LOG_LEVEL=DEBUG \
+  docker compose up -d --build --scale item-service=2
+```
+
+查看实例与宿主机端口，并向订单服务连续下单后统计各副本日志：
+
+```bash
+docker compose ps item-service order-service
+for c in $(docker compose ps -q item-service); do
+  docker logs "$c" 2>&1 | grep -c "item-service request itemId=lb-demo-"
+done
+```
+
+一键验证（包含双实例分发、`503` 下线、`201` 恢复）：
+
+```bash
+bash scripts/e2e-test.sh
+```
+
+### 运行结果
+
+两个副本分别映射到 `127.0.0.1:32840` 和 `127.0.0.1:32841`，同一镜像、不同宿主机端口。连续 10 次 `POST /api/orders`（不存在的商品，均返回 `409`）后，两个副本的日志各命中 5 次，说明请求由负载均衡实际分配到两个实例。`scripts/e2e-test.sh` 输出 `Feign load balancing reached both item-service instances`，随后停止实例返回 `503`、恢复后返回 `201`。
+
+### 截图
+
+![商品服务双实例与不同宿主机端口](screenshots/05-lb-instances.png)
+
+`docker compose ps` 显示两个 `item-service` 副本分别占用 `32840`、`32841`，订单服务占用 `18092`。
+
+![请求在两个实例上的分布](screenshots/06-lb-request-distribution.png)
+
+10 次调用后两个副本各收到 5 次请求，并附两个实例各自的请求日志行。
+
+![端到端脚本验证结论](screenshots/07-lb-e2e-result.png)
+
+`scripts/e2e-test.sh` 实际输出：双实例均通过健康检查、Feign 请求到达两个实例、依赖不可用返回 `503`、恢复后创建订单返回 `201`。
