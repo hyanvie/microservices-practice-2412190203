@@ -158,17 +158,19 @@ bash monolith/mvnw -B -f services/item-service/pom.xml clean test
 
 结果：订单服务 `Tests run: 4, Failures: 0`；商品服务 `Tests run: 1, Failures: 0`。
 
-端到端脚本（Docker 可用时已实际运行通过，本轮 Docker 未启用未重跑）：
+端到端脚本（本轮已在 Docker 可用的 WSL 环境中实际运行通过）：
 
 ```bash
 bash scripts/e2e-test.sh
 ```
 
-脚本逻辑不变，核心验证点有：
-1. 两个商品服务实例健康检查通过；
-2. 同一批 Feign 请求至少到达两个实例（真实负载均衡，而非仅看 Nacos 注册列表）；
-3. 停止两个实例时，订单服务返回 `503`，订单数据库没有新增记录；
-4. 恢复实例后，订单服务返回 `201`，数据库出现新订单。
+本次运行输出：
+1. 两个商品服务实例健康检查通过（容器 ID `b40d22...`、`ce5601...`）；
+2. `Feign load balancing reached both item-service instances`，同一批 Feign 请求真实到达两个实例；
+3. 停止两个实例后返回 `HTTP 503`，且订单数据库无新增记录；
+4. 恢复实例后重新健康，返回 `HTTP 201` 和订单 JSON。
+
+脚本退出码为 `0`，清理了本次启动的所有容器和 compose 网络（保留 MySQL 命名数据卷）。
 
 ### 写操作超时的结果未知性
 
@@ -186,6 +188,6 @@ bash scripts/e2e-test.sh
 
 `ItemServiceTest` 回归通过，保证被调用方的核心业务逻辑未被修改破坏。
 
-![端到端脚本状态](screenshots/10-e2e-script-status.png)
+![端到端脚本实际运行结果](screenshots/11-e2e-final-run.png)
 
-本轮 WSL Docker 未启用，无法重跑；脚本源码完整，此前在 Docker 可用的相同环境中已实际运行通过，结果见第 3 节 `07-lb-e2e-result.png`（双实例健康、请求到达两实例、下线 `503`、恢复 `201`）。
+`scripts/e2e-test.sh` 完整输出：双实例健康、Feign 请求到达两副本、依赖下线返回 `503`、恢复后创建订单返回 `201`，退出码 `0`。
