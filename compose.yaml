@@ -82,6 +82,8 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8083
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env (32+ random bytes)}"
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-60}
       DB_URL: jdbc:mysql://user-db:3306/secondlight_user?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USERNAME: user_user
       DB_PASSWORD: user_pass
