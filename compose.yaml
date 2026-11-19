@@ -82,6 +82,8 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8083
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env (32+ random bytes)}"
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-60}
       DB_URL: jdbc:mysql://user-db:3306/secondlight_user?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USERNAME: user_user
       DB_PASSWORD: user_pass
@@ -151,6 +153,37 @@ services:
         condition: service_healthy
       nacos:
         condition: service_healthy
+
+  gateway-service:
+    build:
+      context: ./services/gateway-service
+      dockerfile: Dockerfile
+    image: secondlight-gateway-service:week09
+    container_name: secondlight-gateway-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8080
+      USER_SERVICE_URI: http://user-service:8083
+      ITEM_SERVICE_URI: http://item-service:8081
+      ORDER_SERVICE_URI: http://order-service:8082
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env (32+ random bytes)}"
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-60}
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_USERNAME: "${NACOS_USERNAME:?Set NACOS_USERNAME in .env after initializing Nacos}"
+      NACOS_PASSWORD: "${NACOS_PASSWORD:?Set NACOS_PASSWORD in .env after initializing Nacos}"
+      NACOS_GROUP: ${NACOS_GROUP:-DEFAULT_GROUP}
+      NACOS_DISCOVERY_ENABLED: "true"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      item-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
 
 volumes:
   nacos-data:
