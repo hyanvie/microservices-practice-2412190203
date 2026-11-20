@@ -248,7 +248,17 @@ bash scripts/auth-test.sh
 
 补充验证管理员 `admin-1001` 访问 `/api/users/admin/overview` 返回 200，响应角色为 ADMIN。脚本任一项失败会以非零状态退出，便于接入持续集成。
 
+测试脚本完整输出：
+
 ![测试脚本运行结果](screenshots/08-auth-test-script.png)
+
+低权限 Token 访问管理接口返回 403：
+
+![买家访问管理接口被拒绝](screenshots/09-auth-test-admin-forbidden.png)
+
+管理员 Token 访问管理接口返回 200：
+
+![管理员访问管理接口成功](screenshots/10-auth-test-admin-access.png)
 
 ## 作业系统说明
 
