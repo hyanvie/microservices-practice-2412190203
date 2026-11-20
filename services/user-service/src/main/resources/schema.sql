@@ -14,6 +14,10 @@ INSERT INTO users (id)
 SELECT 'seller-1002'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 'seller-1002');
 
+INSERT INTO users (id)
+SELECT 'admin-1001'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 'admin-1001');
+
 CREATE TABLE IF NOT EXISTS user_credentials (
     user_id VARCHAR(80) PRIMARY KEY,
     password_hash VARCHAR(255) NOT NULL,
@@ -24,4 +28,5 @@ CREATE TABLE IF NOT EXISTS user_credentials (
 INSERT IGNORE INTO user_credentials (user_id, password_hash, role) VALUES
 ('buyer-1001', 'pbkdf2-sha256$210000$s1ii3qcG1lkMyleUDkcz4w==$oI1LOKhEQKBIKBUK3bKXSd6r/YKA1uPkz5hnh90HKLc=', 'BUYER'),
 ('seller-1001', 'pbkdf2-sha256$210000$KcLi8WWpkEUnV91Ne1F9+w==$cu8DXLzQjXEtIyyQJOMPadhYtCT5ZBWz2lKNWtRMnLM=', 'SELLER'),
-('seller-1002', 'pbkdf2-sha256$210000$KcLi8WWpkEUnV91Ne1F9+w==$cu8DXLzQjXEtIyyQJOMPadhYtCT5ZBWz2lKNWtRMnLM=', 'SELLER');
+('seller-1002', 'pbkdf2-sha256$210000$KcLi8WWpkEUnV91Ne1F9+w==$cu8DXLzQjXEtIyyQJOMPadhYtCT5ZBWz2lKNWtRMnLM=', 'SELLER'),
+('admin-1001', 'pbkdf2-sha256$210000$YWRtaW4tZGVtby0yMDI2IQ==$5HLCzWDJ+aoGnKt9YBTVo7UiqP0nxSI2Rj/z0eDp3vQ=', 'ADMIN');

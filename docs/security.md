@@ -6,7 +6,7 @@
 2. `user-service` 从 `user_credentials` 读取 PBKDF2-HMAC-SHA256 密码哈希并校验，明文密码不落库。
 3. 校验通过后，`user-service` 使用 HS256 签发 JWT，声明包含 `sub`（用户 ID）、`iss`、`iat`、`exp` 和 `roles`。
 4. 客户端后续请求携带 `Authorization: Bearer <token>`。
-5. 网关使用与签发方相同的 `JWT_SECRET` 验签并检查有效期，失败返回 401；再按 `roles` 声明映射为 `ROLE_BUYER`、`ROLE_SELLER` 判断接口权限，越权返回 403。
+5. 网关使用与签发方相同的 `JWT_SECRET` 验签并检查有效期，失败返回 401；再按 `roles` 声明映射为 `ROLE_BUYER`、`ROLE_SELLER`、`ROLE_ADMIN` 判断接口权限，越权返回 403。
 6. 网关删除客户端自带的 `X-User-Id`、`X-User-Roles`，仅在验签通过后写入可信身份头再转发。
 7. `user-service` 仍按 Resource Server 方式独立验签，不依赖网关注入的身份头。
 
@@ -19,6 +19,7 @@ JWT 密钥只从环境变量 `JWT_SECRET` 注入，要求至少 32 个 UTF-8 字
 | 匿名 | `POST /api/users/login`、`GET /api/users/{userId}/exists`、`GET /api/items/**`、`GET /actuator/health` |
 | BUYER | 买家资料 `/api/users/buyer/**`、商品锁定 `POST /api/items/{itemId}/reserve`、创建订单 `POST /api/orders` |
 | SELLER | 卖家资料 `/api/users/seller/**` |
+| ADMIN | 管理概览 `/api/users/admin/**` |
 | 已登录用户 | 其余网关路由，包括订单查询 `GET /api/orders/**` |
 
 课程演示账号：
@@ -28,6 +29,7 @@ JWT 密钥只从环境变量 `JWT_SECRET` 注入，要求至少 32 个 UTF-8 字
 | buyer-1001 | BuyerDemo!2026 | BUYER |
 | seller-1001 | SellerDemo!2026 | SELLER |
 | seller-1002 | SellerDemo!2026 | SELLER |
+| admin-1001 | AdminDemo!2026 | ADMIN |
 
 演示凭据仅用于本地课程环境。
 
@@ -35,7 +37,7 @@ JWT 密钥只从环境变量 `JWT_SECRET` 注入，要求至少 32 个 UTF-8 字
 
 | 路由 ID | 路径 | 下游服务 | 鉴权规则 |
 |---|---|---|---|
-| `user-service` | `/api/users/**` | `user-service:8083` | 登录、存在性查询匿名；买家/卖家资料按角色；其余需登录 |
+| `user-service` | `/api/users/**` | `user-service:8083` | 登录、存在性查询匿名；管理接口需 ADMIN；买家/卖家资料按角色；其余需登录 |
 | `item-service` | `/api/items/**` | `item-service:8081` | `GET` 匿名；`POST .../reserve` 需 BUYER |
 | `order-service` | `/api/orders/**` | `order-service:8082` | 创建订单需 BUYER；其余需登录 |
 
@@ -76,7 +78,19 @@ curl -i -H 'X-User-Id: forged-admin' -H 'X-User-Roles: SELLER' \
 curl -i -H "Authorization: Bearer $BUYER_TOKEN" \
   -H 'X-User-Id: forged-admin' -H 'X-User-Roles: SELLER' \
   http://localhost:8080/api/users/seller/profile
+
+# 低权限 Token 访问管理接口，预期 403
+curl -i -H "Authorization: Bearer $BUYER_TOKEN" \
+  http://localhost:8080/api/users/admin/overview
 ```
+
+自动化检查脚本 `scripts/auth-test.sh` 覆盖未登录、登录、授权和越权四类场景，任一失败以非零状态退出：
+
+```bash
+bash scripts/auth-test.sh
+```
+
+实际执行结果为 5 项检查全部通过；管理员 `admin-1001` 访问 `/api/users/admin/overview` 返回 200，买家 Token 访问同一接口返回 403。
 
 网关返回的 401/403 为 JSON，包含 `status`、`error`、`message` 和 `path`。运行截图见
 [`docs/homework/week-09/screenshots/`](homework/week-09/screenshots/)。

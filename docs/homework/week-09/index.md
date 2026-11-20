@@ -55,6 +55,7 @@ JWT 密钥只从本地 `.env` 的 `JWT_SECRET` 注入，要求至少 32 UTF-8 �
 | buyer-1001 | BuyerDemo!2026 | BUYER |
 | seller-1001 | SellerDemo!2026 | SELLER |
 | seller-1002 | SellerDemo!2026 | SELLER |
+| admin-1001 | AdminDemo!2026 | ADMIN |
 
 这些是课程演示凭据，不可用于生产环境。
 
@@ -122,6 +123,7 @@ curl -sS -o /dev/null -w '未登录访问 HTTP %{http_code}\n' \
 | `POST /api/items/{itemId}/reserve` | BUYER |
 | `/api/users/buyer/**` | BUYER |
 | `/api/users/seller/**` | SELLER |
+| `/api/users/admin/**` | ADMIN |
 | `POST /api/orders` | BUYER |
 | 其他网关路由 | 已登录用户 |
 
@@ -210,11 +212,51 @@ curl -sS -H "Authorization: Bearer $BUYER_TOKEN" \
 
 ![伪造身份头验证](screenshots/07-gateway-forged-headers.png)
 
+## 测试脚本
+
+### 实现思路
+
+新增 `scripts/auth-test.sh`，以网关 `http://localhost:8080` 为统一入口，依次检查四类场景：
+
+1. 未登录访问 `/api/users/buyer/profile`，期望 401。
+2. 使用 `buyer-1001` 调用 `POST /api/users/login`，期望 200 并取得 `accessToken`。
+3. 携带 Token 访问买家资料，期望 200，且响应 `userId` 与登录用户一致。
+4. 使用买家 Token 访问 `/api/users/admin/overview`，期望 403。
+
+脚本通过 `curl` 获取 HTTP 状态码，通过 `jq` 校验登录响应和身份字段。任一检查失败会输出 `FAIL` 并以非零状态退出；全部通过输出 `PASS` 汇总。管理接口在网关和 `user-service` 两处都要求 ADMIN 角色，避免绕过网关直接访问。
+
+### 运行命令
+
+确保 Compose 环境已启动，重新构建用户服务和网关：
+
+```bash
+docker compose up -d --build user-service gateway-service
+bash scripts/auth-test.sh
+```
+
+### 验证结果
+
+在 Compose 环境执行 `bash scripts/auth-test.sh`，5 项检查全部通过：
+
+| 检查项 | 期望 | 实际 |
+|---|---|---|
+| 未登录访问受保护接口 | 401 | 401 |
+| 登录获取 Token | 200 | 200 |
+| 携带 Token 访问受保护接口 | 200 | 200 |
+| Token 身份与登录用户一致 | `userId=buyer-1001` | `userId=buyer-1001` |
+| 低权限 Token 访问管理接口 | 403 | 403 |
+
+补充验证管理员 `admin-1001` 访问 `/api/users/admin/overview` 返回 200，响应角色为 ADMIN。脚本任一项失败会以非零状态退出，便于接入持续集成。
+
+![测试脚本运行结果](screenshots/08-auth-test-script.png)
+
 ## 作业系统说明
 
 API Gateway 已新增独立 Spring Cloud Gateway 工程，并在 Compose 中接入 Nacos 服务发现。网关监听 8080，配置用户、商品、订单三条按服务名转发的路由和 Actuator 健康检查。验证方式为启动依赖及网关后请求 `/actuator/health` 和三类业务路径。
 
-网关已统一校验 JWT 并实现 BUYER/SELLER 角色权限，未登录或无效 Token 返回 401，越权访问返回 403；转发前清除并覆盖客户端伪造的身份头。通过 Compose 启动网关及依赖服务后，使用买家、卖家 Token 和伪造请求头访问受保护接口即可验证。
+网关已统一校验 JWT 并实现 BUYER/SELLER/ADMIN 角色权限，未登录或无效 Token 返回 401，越权访问返回 403；转发前清除并覆盖客户端伪造的身份头。通过 Compose 启动网关及依赖服务后，使用买家、卖家 Token 和伪造请求头访问受保护接口即可验证。
+
+新增 `scripts/auth-test.sh` 自动覆盖未登录、登录、授权和越权场景，并增加 ADMIN 管理接口校验。启动用户服务和网关后执行 `bash scripts/auth-test.sh`，脚本逐项输出 PASS，全部通过时以 0 退出。
 
 ## 测试账号与角色
 
@@ -223,5 +265,6 @@ API Gateway 已新增独立 Spring Cloud Gateway 工程，并在 Compose 中接�
 | buyer-1001 | 买家 / BUYER | 密码与登录方式见“认证服务” |
 | seller-1001 | 卖家 / SELLER | 密码与登录方式见“认证服务” |
 | seller-1002 | 卖家 / SELLER | 密码与登录方式见“认证服务” |
+| admin-1001 | 管理员 / ADMIN | 密码与登录方式见“认证服务” |
 
 演示账号凭据和 JWT 验证结果见下方“认证服务”小节。

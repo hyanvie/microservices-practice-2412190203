@@ -45,5 +45,10 @@ public class AuthController {
         return Map.of("userId", jwt.getSubject(), "role", "SELLER");
     }
 
+    @GetMapping("/admin/overview")
+    public Map<String, String> adminOverview(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of("adminId", jwt.getSubject(), "role", "ADMIN");
+    }
+
     public record LoginRequest(String userId, String password) { }
 }
